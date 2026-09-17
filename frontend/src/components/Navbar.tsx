@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import logoHeader from '../assets/logo-header.png';
 import './Navbar.css';
+import logoHeader from '../assets/logo-header.png';
 
 const shopCategories = [
     { name: 'Los más vendidos', slug: 'los-mas-vendidos' },
@@ -20,22 +19,8 @@ const collections = [
 ];
 
 export default function Navbar() {
-    const [scrolled, setScrolled] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-        };
-
-        window.addEventListener('scroll', handleScroll);
-
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
-    }, []);
-
     return (
-        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
+        <nav className="navbar">
             <Link to="/" className="navbar__logo">
                 <img src={logoHeader} alt="RSIDENT" title="RSIDENT" />
             </Link>
