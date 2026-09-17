@@ -1,8 +1,13 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import HeroBanner from './components/HeroBanner';
 
 function Home() {
-  return <main>Home</main>;
+  return (
+    <main>
+      <HeroBanner />
+    </main>
+  );
 }
 
 function Shop() {
