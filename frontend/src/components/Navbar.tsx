@@ -1,27 +1,28 @@
 import { Link } from 'react-router-dom';
 import './Navbar.css';
+import logoHeader from '../assets/logo-header.png';
 
 const shopCategories = [
-    'Los más vendidos',
-    'Descuentos',
-    'Camisas',
-    'Pantalones',
-    'Polos',
-    'Poleras y Casacas',
+    { name: 'Los más vendidos', slug: 'los-mas-vendidos' },
+    { name: 'Descuentos', slug: 'descuentos' },
+    { name: 'Camisas', slug: 'camisas' },
+    { name: 'Pantalones', slug: 'pantalones' },
+    { name: 'Polos', slug: 'polos' },
+    { name: 'Poleras y Casacas', slug: 'poleras-y-casacas' },
 ];
 
 const collections = [
-    'CLASSICS',
-    'AURA',
-    'CELESTIAL',
-    'OTRAS',
+    { name: 'CLASSICS', slug: 'classics' },
+    { name: 'AURA', slug: 'aura' },
+    { name: 'CELESTIAL', slug: 'celestial' },
+    { name: 'OTRAS', slug: 'otras' },
 ];
 
 export default function Navbar() {
     return (
         <nav className="navbar">
             <Link to="/" className="navbar__logo">
-                RSIDENT
+                <img src={logoHeader} alt="RSIDENT" title="RSIDENT" />
             </Link>
 
             <div className="navbar__item">
@@ -32,17 +33,11 @@ export default function Navbar() {
                 <div className="navbar__submenu">
                     {shopCategories.map((category) => (
                         <Link
-                            key={category}
-                            to={`/tienda/${category
-                                .toLowerCase()
-                                .replace(/\s+/g, '-')
-                                .replace(/á/g, 'a')
-                                .replace(/í/g, 'i')
-                                .replace(/ó/g, 'o')
-                                .replace(/é/g, 'e')}`}
+                            key={category.slug}
+                            to={`/tienda/${category.slug}`}
                             className="navbar__submenu-link"
                         >
-                            {category}
+                            {category.name}
                         </Link>
                     ))}
                 </div>
@@ -56,11 +51,11 @@ export default function Navbar() {
                 <div className="navbar__submenu">
                     {collections.map((collection) => (
                         <Link
-                            key={collection}
-                            to={`/colecciones/${collection.toLowerCase()}`}
+                            key={collection.slug}
+                            to={`/colecciones/${collection.slug}`}
                             className="navbar__submenu-link"
                         >
-                            {collection}
+                            {collection.name}
                         </Link>
                     ))}
                 </div>
