@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import './Navbar.css';
+import logoHeader from '../assets/logo-header.png';
 
 const shopCategories = [
     { name: 'Los más vendidos', slug: 'los-mas-vendidos' },
@@ -21,7 +22,7 @@ export default function Navbar() {
     return (
         <nav className="navbar">
             <Link to="/" className="navbar__logo">
-                RSIDENT
+                <img src={logoHeader} alt="RSIDENT" title="RSIDENT" />
             </Link>
 
             <div className="navbar__item">
