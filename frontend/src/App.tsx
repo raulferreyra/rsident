@@ -4,6 +4,11 @@ import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
 import Footerbar from './components/Footerbar';
 
+// Admin
+import ProtectedRoute from './admin/components/ProtectedRoute';
+import Login from './admin/pages/Login';
+import Dashboard from './admin/pages/Dashboard';
+
 function Home() {
   return (
     <main>
@@ -42,6 +47,18 @@ function App() {
 
         <Route path="/colecciones" element={<Collections />} />
         <Route path="/colecciones/:collection" element={<Collection />} />
+
+        <Route
+          path="/admin/login"
+          element={<Login />}
+        />
+
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/admin/dashboard"
+            element={<Dashboard />}
+          />
+        </Route>
       </Routes>
 
       <Footerbar />
