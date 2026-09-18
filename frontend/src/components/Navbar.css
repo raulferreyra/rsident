@@ -74,9 +74,6 @@
         visibility 0.2s ease;
 }
 
-
-
-
 .navbar__item:hover .navbar__submenu {
     visibility: visible;
     opacity: 1;
