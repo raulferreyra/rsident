@@ -11,6 +11,7 @@ import (
 
 	"github.com/raulferreyra/rsident/backend/internal/config"
 	"github.com/raulferreyra/rsident/backend/internal/routes"
+	"github.com/raulferreyra/rsident/backend/internal/services"
 )
 
 func main() {
@@ -53,9 +54,19 @@ func main() {
 		},
 	}))
 
+	catalogService := services.NewCatalogService(
+		firebase.Firestore,
+	)
+
+	productService := services.NewProductService(
+		firebase.Firestore,
+	)
+
 	routes.Setup(
 		router,
 		firebase.Auth,
+		catalogService,
+		productService,
 	)
 
 	log.Printf(
