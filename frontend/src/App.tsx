@@ -9,6 +9,7 @@ import BestSellers from './components/BestSellers';
 import ProtectedRoute from './admin/components/ProtectedRoute';
 import Login from './admin/pages/Login';
 import Dashboard from './admin/pages/Dashboard';
+import Catalog from './admin/pages/Catalog';
 
 function Home() {
   return (
@@ -77,6 +78,36 @@ function AdminRoutes() {
         <Route
           path="/admin/dashboard"
           element={<Dashboard />}
+        />
+
+        <Route
+          path="/admin/categories"
+          element={
+            <Catalog
+              type="categories"
+              title="Categorías"
+            />
+          }
+        />
+
+        <Route
+          path="/admin/collections"
+          element={
+            <Catalog
+              type="collections"
+              title="Colecciones"
+            />
+          }
+        />
+
+        <Route
+          path="/admin/tags"
+          element={
+            <Catalog
+              type="tags"
+              title="Etiquetas"
+            />
+          }
         />
       </Route>
     </Routes>
