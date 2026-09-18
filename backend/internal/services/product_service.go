@@ -38,7 +38,7 @@ func (s *ProductService) List(
 	}
 
 	docs, err := query.
-		Documents().
+		Documents(ctx).
 		GetAll()
 
 	if err != nil {
