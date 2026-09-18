@@ -6,11 +6,14 @@ import (
 
 	"github.com/raulferreyra/rsident/backend/internal/handlers"
 	"github.com/raulferreyra/rsident/backend/internal/middleware"
+	"github.com/raulferreyra/rsident/backend/internal/services"
 )
 
 func Setup(
 	router *gin.Engine,
 	authClient *auth.Client,
+	catalogService *services.CatalogService,
+	productService *services.ProductService,
 ) {
 	api := router.Group("/api")
 
@@ -19,6 +22,30 @@ func Setup(
 			"status": "ok",
 		})
 	})
+
+	catalogHandler := handlers.NewCatalogHandler(
+		catalogService,
+	)
+
+	productHandler := handlers.NewProductHandler(
+		productService,
+	)
+
+	api.GET(
+		"/products",
+		func(c *gin.Context) {
+			c.Set("admin", false)
+			productHandler.List(c)
+		},
+	)
+
+	api.GET(
+		"/products/:id",
+		func(c *gin.Context) {
+			c.Set("admin", false)
+			productHandler.Get(c)
+		},
+	)
 
 	admin := api.Group("/admin")
 
@@ -29,5 +56,56 @@ func Setup(
 	admin.GET(
 		"/dashboard",
 		handlers.Dashboard,
+	)
+
+	admin.GET(
+		"/catalog/:collection",
+		catalogHandler.List,
+	)
+
+	admin.POST(
+		"/catalog/:collection",
+		catalogHandler.Create,
+	)
+
+	admin.PUT(
+		"/catalog/:collection/:id",
+		catalogHandler.Update,
+	)
+
+	admin.DELETE(
+		"/catalog/:collection/:id",
+		catalogHandler.Delete,
+	)
+
+	admin.GET(
+		"/products",
+		func(c *gin.Context) {
+			c.Set("admin", true)
+			productHandler.List(c)
+		},
+	)
+
+	admin.GET(
+		"/products/:id",
+		func(c *gin.Context) {
+			c.Set("admin", true)
+			productHandler.Get(c)
+		},
+	)
+
+	admin.POST(
+		"/products",
+		productHandler.Create,
+	)
+
+	admin.PUT(
+		"/products/:id",
+		productHandler.Update,
+	)
+
+	admin.DELETE(
+		"/products/:id",
+		productHandler.Delete,
 	)
 }
