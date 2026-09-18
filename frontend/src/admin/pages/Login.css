@@ -1,0 +1,110 @@
+.admin-login {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    width: 100%;
+    min-height: 100vh;
+}
+
+.admin-login__image {
+    min-height: 100vh;
+
+    background-image: url('../../assets/rsident-background.jpg');
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.admin-login__form-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 40px;
+}
+
+.admin-login__form {
+    width: 100%;
+    max-width: 380px;
+}
+
+.admin-login__form h1 {
+    margin: 0 0 40px;
+
+    font-size: 1.8rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+}
+
+.admin-login__field {
+    margin-bottom: 24px;
+}
+
+.admin-login__field label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 0.85rem;
+}
+
+.admin-login__field input {
+    width: 100%;
+
+    padding: 12px 0;
+
+    border: 0;
+    border-bottom: 1px solid #111;
+
+    outline: none;
+    color: #111;
+
+    background: transparent;
+
+    font: inherit;
+}
+
+.admin-login__field input:focus {
+    border-bottom-color: #666;
+}
+
+.admin-login__error {
+    margin: 0 0 20px;
+
+    font-size: 0.85rem;
+}
+
+.admin-login__form button {
+    width: 100%;
+
+    padding: 14px 20px;
+
+    border: 0;
+
+    background: #111;
+    color: #fff;
+
+    font: inherit;
+
+    cursor: pointer;
+}
+
+.admin-login__form button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+@media (max-width: 767px) {
+    .admin-login {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-login__image {
+        display: none;
+    }
+
+    .admin-login__form-container {
+        min-height: 100vh;
+        padding: 30px 20px;
+    }
+}

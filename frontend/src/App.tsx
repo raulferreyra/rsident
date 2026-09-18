@@ -1,8 +1,14 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+
 import Navbar from './components/Navbar';
+import Footerbar from './components/Footerbar';
 import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
-import Footerbar from './components/Footerbar';
+
+// Admin pages
+import ProtectedRoute from './admin/components/ProtectedRoute';
+import Login from './admin/pages/Login';
+import Dashboard from './admin/pages/Dashboard';
 
 function Home() {
   return (
@@ -29,22 +35,59 @@ function Collection() {
   return <main>Colección</main>;
 }
 
-function App() {
+function PublicLayout() {
   return (
-    <BrowserRouter>
+    <>
       <Navbar />
 
       <Routes>
         <Route path="/" element={<Home />} />
 
         <Route path="/tienda" element={<Shop />} />
-        <Route path="/tienda/:category" element={<ShopFilter />} />
+        <Route
+          path="/tienda/:category"
+          element={<ShopFilter />}
+        />
 
-        <Route path="/colecciones" element={<Collections />} />
-        <Route path="/colecciones/:collection" element={<Collection />} />
+        <Route
+          path="/colecciones"
+          element={<Collections />}
+        />
+
+        <Route
+          path="/colecciones/:collection"
+          element={<Collection />}
+        />
       </Routes>
 
       <Footerbar />
+    </>
+  );
+}
+
+function AdminRoutes() {
+  return (
+    <Routes>
+      <Route
+        path="/admin/login"
+        element={<Login />}
+      />
+
+      <Route element={<ProtectedRoute />}>
+        <Route
+          path="/admin/dashboard"
+          element={<Dashboard />}
+        />
+      </Route>
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <PublicLayout />
+      <AdminRoutes />
     </BrowserRouter>
   );
 }

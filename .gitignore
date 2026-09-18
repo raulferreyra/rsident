@@ -111,3 +111,4 @@ generated/
 config.local.*
 
 frontend/src/assets/prueba.*
+backend/credentials/*
