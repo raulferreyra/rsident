@@ -9,11 +9,10 @@
 .admin-login__image {
     min-height: 100vh;
 
-    background-image: url('/assets/rsident-background.jpg');
-    background-position: center;
+    background-image: url('../../assets/rsident-background.jpg');
+    background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
-    background-attachment: fixed;
 }
 
 .admin-login__form-container {
