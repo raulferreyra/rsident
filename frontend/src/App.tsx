@@ -10,6 +10,8 @@ import ProtectedRoute from './admin/components/ProtectedRoute';
 import Login from './admin/pages/Login';
 import Dashboard from './admin/pages/Dashboard';
 import Catalog from './admin/pages/Catalog';
+import Products from './admin/pages/Products';
+import ProductForm from './admin/pages/ProductForm';
 
 function Home() {
   return (
@@ -108,6 +110,21 @@ function AdminRoutes() {
               title="Etiquetas"
             />
           }
+        />
+
+        <Route
+          path="/admin/products"
+          element={<Products />}
+        />
+
+        <Route
+          path="/admin/products/new"
+          element={<ProductForm />}
+        />
+
+        <Route
+          path="/admin/products/:id"
+          element={<ProductForm />}
         />
       </Route>
     </Routes>
