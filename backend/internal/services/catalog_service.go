@@ -94,12 +94,27 @@ func (s *CatalogService) Update(
 		return err
 	}
 
+	docRef := s.db.
+		Collection(collection).
+		Doc(id)
+
+	existing, err := docRef.Get(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	var current models.CatalogItem
+
+	if err := existing.DataTo(&current); err != nil {
+		return err
+	}
+
+	item.ID = id
+	item.CreatedAt = current.CreatedAt
 	item.UpdatedAt = time.Now()
 
-	_, err := s.db.
-		Collection(collection).
-		Doc(id).
-		Set(ctx, item)
+	_, err = docRef.Set(ctx, item)
 
 	return err
 }
