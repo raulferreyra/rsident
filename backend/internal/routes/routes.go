@@ -48,10 +48,7 @@ func Setup(
 	)
 
 	admin := api.Group("/admin")
-
-	admin.Use(
-		middleware.FirebaseAuth(authClient),
-	)
+	admin.Use(middleware.FirebaseAuth(authClient))
 
 	admin.GET(
 		"/dashboard",
@@ -62,17 +59,14 @@ func Setup(
 		"/catalog/:collection",
 		catalogHandler.List,
 	)
-
 	admin.POST(
 		"/catalog/:collection",
 		catalogHandler.Create,
 	)
-
 	admin.PUT(
 		"/catalog/:collection/:id",
 		catalogHandler.Update,
 	)
-
 	admin.DELETE(
 		"/catalog/:collection/:id",
 		catalogHandler.Delete,
@@ -80,32 +74,23 @@ func Setup(
 
 	admin.GET(
 		"/products",
-		func(c *gin.Context) {
-			c.Set("admin", true)
-			productHandler.List(c)
-		},
+		productHandler.List,
 	)
-
-	admin.GET(
-		"/products/:id",
-		func(c *gin.Context) {
-			c.Set("admin", true)
-			productHandler.Get(c)
-		},
-	)
-
 	admin.POST(
 		"/products",
 		productHandler.Create,
 	)
-
 	admin.PUT(
 		"/products/:id",
 		productHandler.Update,
 	)
-
 	admin.DELETE(
 		"/products/:id",
 		productHandler.Delete,
+	)
+
+	admin.POST(
+		"/products/:id/images",
+		handlers.UploadProductImage,
 	)
 }

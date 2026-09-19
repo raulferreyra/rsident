@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,6 +11,15 @@ import (
 )
 
 func UploadProductImage(c *gin.Context) {
+	productID := c.Param("id")
+
+	if productID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ID de producto requerido",
+		})
+		return
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -20,8 +28,7 @@ func UploadProductImage(c *gin.Context) {
 		return
 	}
 
-	contentType := file.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "image/") {
+	if !strings.HasPrefix(file.Header.Get("Content-Type"), "image/") {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "El archivo debe ser una imagen",
 		})
@@ -35,9 +42,19 @@ func UploadProductImage(c *gin.Context) {
 		return
 	}
 
-	productID := c.Param("id")
+	extension := strings.ToLower(filepath.Ext(file.Filename))
 
-	uploadDir := filepath.Join("uploads", "products", productID)
+	if extension == "" {
+		extension = ".jpg"
+	}
+
+	filename := uuid.NewString() + extension
+
+	uploadDir := filepath.Join(
+		"uploads",
+		"products",
+		productID,
+	)
 
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -46,13 +63,6 @@ func UploadProductImage(c *gin.Context) {
 		return
 	}
 
-	extension := strings.ToLower(filepath.Ext(file.Filename))
-
-	if extension == "" {
-		extension = ".jpg"
-	}
-
-	filename := fmt.Sprintf("%s%s", generateFileName(), extension)
 	filePath := filepath.Join(uploadDir, filename)
 
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
@@ -63,11 +73,6 @@ func UploadProductImage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"url":  "/uploads/products/" + productID + "/" + filename,
-		"path": filePath,
+		"url": "/uploads/products/" + productID + "/" + filename,
 	})
-}
-
-func generateFileName() string {
-	return uuid.NewString()
 }
