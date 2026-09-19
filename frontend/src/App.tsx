@@ -11,6 +11,7 @@ import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
 
 // Admin pages
+import AdminNavbar from './admin/components/AdminNavbar';
 import ProtectedRoute from './admin/components/ProtectedRoute';
 import Login from './admin/pages/Login';
 import Dashboard from './admin/pages/Dashboard';
@@ -140,14 +141,30 @@ function AdminRoutes() {
   );
 }
 
+function AdminLayout() {
+  return (
+    <>
+      <AdminNavbar />
+      <AdminRoutes />
+    </>
+  );
+}
+
 function AppContent() {
   const location = useLocation();
 
   const isAdminRoute =
     location.pathname.startsWith('/admin');
 
+  const isAdminLogin =
+    location.pathname === '/admin/login';
+
   if (isAdminRoute) {
-    return <AdminRoutes />;
+    if (isAdminLogin) {
+      return <AdminRoutes />;
+    }
+
+    return <AdminLayout />;
   }
 
   return <PublicLayout />;
