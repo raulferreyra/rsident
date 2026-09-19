@@ -1,4 +1,9 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 
 import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
@@ -46,7 +51,11 @@ function PublicLayout() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/tienda" element={<Shop />} />
+        <Route
+          path="/tienda"
+          element={<Shop />}
+        />
+
         <Route
           path="/tienda/:category"
           element={<ShopFilter />}
@@ -131,11 +140,23 @@ function AdminRoutes() {
   );
 }
 
+function AppContent() {
+  const location = useLocation();
+
+  const isAdminRoute =
+    location.pathname.startsWith('/admin');
+
+  if (isAdminRoute) {
+    return <AdminRoutes />;
+  }
+
+  return <PublicLayout />;
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <PublicLayout />
-      <AdminRoutes />
+      <AppContent />
     </BrowserRouter>
   );
 }
