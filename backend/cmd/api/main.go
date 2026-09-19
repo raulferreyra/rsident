@@ -35,6 +35,8 @@ func main() {
 
 	router := gin.Default()
 
+	router.Static("/uploads", "./uploads")
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",
