@@ -135,7 +135,7 @@ function AdminRoutes() {
         />
 
         <Route
-          path="/admin/products/:id"
+          path="/admin/products/:id/edit"
           element={<ProductForm />}
         />
       </Route>
