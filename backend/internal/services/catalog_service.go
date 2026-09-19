@@ -14,6 +14,32 @@ type CatalogService struct {
 	db *firestore.Client
 }
 
+func (s *CatalogService) Exists(
+	ctx context.Context,
+	collection string,
+	slug string,
+	excludeID string,
+) (bool, error) {
+	docs, err := s.db.
+		Collection(collection).
+		Where("slug", "==", slug).
+		Limit(1).
+		Documents(ctx).
+		GetAll()
+
+	if err != nil {
+		return false, err
+	}
+
+	for _, doc := range docs {
+		if doc.Ref.ID != excludeID {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func NewCatalogService(
 	db *firestore.Client,
 ) *CatalogService {
@@ -66,6 +92,23 @@ func (s *CatalogService) Create(
 		return nil, err
 	}
 
+	exists, err := s.Exists(
+		ctx,
+		collection,
+		item.Slug,
+		"",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return nil, fmt.Errorf(
+			"ya existe un registro con ese nombre o slug",
+		)
+	}
+
 	now := time.Now()
 
 	item.CreatedAt = now
@@ -92,6 +135,23 @@ func (s *CatalogService) Update(
 ) error {
 	if err := ValidateCatalogCollection(collection); err != nil {
 		return err
+	}
+
+	exists, err := s.Exists(
+		ctx,
+		collection,
+		item.Slug,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return fmt.Errorf(
+			"ya existe otro registro con ese nombre o slug",
+		)
 	}
 
 	docRef := s.db.
