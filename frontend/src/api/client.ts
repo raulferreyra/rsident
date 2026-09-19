@@ -14,14 +14,17 @@ async function request<T>(
 
     const token = await user.getIdToken();
 
-    const response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            ...options.headers,
+    const response = await fetch(
+        `${API_URL}${path}`,
+        {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+                ...options.headers,
+            },
         },
-    });
+    );
 
     if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -29,6 +32,10 @@ async function request<T>(
         throw new Error(
             body?.error ?? 'Error en la solicitud',
         );
+    }
+
+    if (response.status === 204) {
+        return undefined as T;
     }
 
     return response.json();
