@@ -56,19 +56,26 @@ export async function uploadFile<T>(
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_URL}${path}`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${token}`,
+    const response = await fetch(
+        `${API_URL}${path}`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            body: formData,
         },
-        body: formData,
-    });
+    );
 
     if (!response.ok) {
-        const body = await response.json().catch(() => null);
+        const body =
+            await response.json().catch(
+                () => null,
+            );
 
         throw new Error(
-            body?.error ?? 'Error al subir el archivo',
+            body?.error ??
+            'Error al subir el archivo',
         );
     }
 
