@@ -16,11 +16,11 @@ type ProductColor struct {
 }
 
 type ProductVariant struct {
-	ID    string `json:"id" firestore:"id"`
-	Color string `json:"color" firestore:"color"`
-	Size  string `json:"size" firestore:"size"`
-	SKU   string `json:"sku" firestore:"sku"`
-	Stock int    `json:"stock" firestore:"stock"`
+	ID      string `json:"id" firestore:"id"`
+	ColorID string `json:"colorId" firestore:"colorId"`
+	Size    string `json:"size" firestore:"size"`
+	SKU     string `json:"sku" firestore:"sku"`
+	Stock   int    `json:"stock" firestore:"stock"`
 }
 
 type Product struct {
@@ -33,11 +33,9 @@ type Product struct {
 	CategoryID   string           `json:"categoryId" firestore:"categoryId"`
 	CollectionID string           `json:"collectionId" firestore:"collectionId"`
 	TagIDs       []string         `json:"tagIds" firestore:"tagIds"`
-	ReferenceURL string           `json:"referenceUrl" firestore:"referenceUrl"`
 	Images       []ProductImage   `json:"images" firestore:"images"`
 	Colors       []ProductColor   `json:"colors" firestore:"colors"`
 	Variants     []ProductVariant `json:"variants" firestore:"variants"`
-	SizeChartURL string           `json:"sizeChartUrl" firestore:"sizeChartUrl"`
 	Published    bool             `json:"published" firestore:"published"`
 	Featured     bool             `json:"featured" firestore:"featured"`
 	IsNew        bool             `json:"isNew" firestore:"isNew"`
