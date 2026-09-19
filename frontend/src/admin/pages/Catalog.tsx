@@ -150,50 +150,54 @@ export default function Catalog({
         <main className="admin-catalog">
             <header className="admin-catalog__header">
                 <div>
-                    <span>CATÁLOGO</span>
                     <h1>{title}</h1>
+                    <p>
+                        Gestiona los registros de {title.toLowerCase()}.
+                    </p>
                 </div>
             </header>
 
-            <form
-                className="admin-catalog__form"
-                onSubmit={handleSubmit}
-            >
-                <div>
-                    <label htmlFor="catalog-name">
-                        Nombre
-                    </label>
+            <section className="admin-catalog__form">
+                <form onSubmit={handleSubmit}>
+                    <div className="admin-catalog__field">
+                        <label htmlFor="catalog-name">
+                            Nombre
+                        </label>
 
-                    <input
-                        id="catalog-name"
-                        value={name}
-                        onChange={(event) => {
-                            setName(event.target.value);
-                        }}
-                        placeholder={`Nueva ${title.toLowerCase()}`}
-                    />
-                </div>
+                        <input
+                            id="catalog-name"
+                            type="text"
+                            value={name}
+                            onChange={(event) =>
+                                setName(event.target.value)
+                            }
+                            placeholder={`Nombre de ${title.toLowerCase()}`}
+                        />
+                    </div>
 
-                <button
-                    type="submit"
-                    disabled={saving}
-                >
-                    {saving
-                        ? 'Guardando...'
-                        : editingID
-                            ? 'Actualizar'
-                            : 'Agregar'}
-                </button>
+                    <div className="admin-catalog__form-actions">
+                        <button
+                            type="submit"
+                            disabled={saving}
+                        >
+                            {saving
+                                ? 'Guardando...'
+                                : editingID
+                                    ? 'Actualizar'
+                                    : 'Crear'}
+                        </button>
 
-                {editingID && (
-                    <button
-                        type="button"
-                        onClick={handleCancel}
-                    >
-                        Cancelar
-                    </button>
-                )}
-            </form>
+                        {editingID && (
+                            <button
+                                type="button"
+                                onClick={handleCancel}
+                            >
+                                Cancelar
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </section>
 
             {error && (
                 <p className="admin-catalog__error">
@@ -201,55 +205,64 @@ export default function Catalog({
                 </p>
             )}
 
-            {loading ? (
-                <p>Cargando...</p>
-            ) : (
-                <div className="admin-catalog__table">
-                    <div className="admin-catalog__row admin-catalog__row--header">
-                        <span>Nombre</span>
-                        <span>Slug</span>
-                        <span>Estado</span>
-                        <span />
-                    </div>
+            <section className="admin-catalog__table-container">
+                {loading ? (
+                    <p>Cargando...</p>
+                ) : items.length === 0 ? (
+                    <p>No hay registros.</p>
+                ) : (
+                    <table className="admin-catalog__table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Slug</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
 
-                    {items.map((item) => (
-                        <div
-                            key={item.id}
-                            className="admin-catalog__row"
-                        >
-                            <span>{item.name}</span>
+                        <tbody>
+                            {items.map((item) => (
+                                <tr key={item.id}>
+                                    <td>{item.name}</td>
 
-                            <span>{item.slug}</span>
+                                    <td>{item.slug}</td>
 
-                            <span>
-                                {item.active
-                                    ? 'Activo'
-                                    : 'Inactivo'}
-                            </span>
+                                    <td>
+                                        {item.active
+                                            ? 'Activo'
+                                            : 'Inactivo'}
+                                    </td>
 
-                            <span className="admin-catalog__actions">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleEdit(item);
-                                    }}
-                                >
-                                    Editar
-                                </button>
+                                    <td>
+                                        <div className="admin-catalog__actions">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleEdit(item)
+                                                }
+                                                className="admin-catalog__edit"
+                                            >
+                                                Editar
+                                            </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleDelete(item.id);
-                                    }}
-                                >
-                                    Eliminar
-                                </button>
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            )}
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleDelete(item.id)
+                                                }
+                                                className="admin-catalog__delete"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </section>
         </main>
     );
 }
