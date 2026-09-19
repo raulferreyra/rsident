@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
-
 import './Products.css';
 
 interface Product {
     id: string;
     name: string;
+    slug: string;
     price: number;
     oldPrice: number;
     published: boolean;
@@ -16,12 +15,15 @@ interface Product {
 }
 
 export default function Products() {
+    const navigate = useNavigate();
+
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     const loadProducts = async () => {
         setLoading(true);
+        setError('');
 
         try {
             const result = await api.get<Product[]>(
@@ -54,11 +56,11 @@ export default function Products() {
         }
 
         try {
-            await api.delete(
-                `/admin/products/${id}`,
-            );
+            await api.delete(`/admin/products/${id}`);
 
-            await loadProducts();
+            setProducts((current) =>
+                current.filter((product) => product.id !== id),
+            );
         } catch (err) {
             setError(
                 err instanceof Error
@@ -72,13 +74,17 @@ export default function Products() {
         <main className="admin-products">
             <header className="admin-products__header">
                 <div>
-                    <span>CATÁLOGO</span>
                     <h1>Productos</h1>
+                    <p>Gestiona el catálogo de productos.</p>
                 </div>
 
-                <Link to="/admin/products/new">
+                <button
+                    type="button"
+                    onClick={() => navigate('/admin/products/new')}
+                    className="admin-products__create"
+                >
                     Nuevo producto
-                </Link>
+                </button>
             </header>
 
             {error && (
@@ -87,54 +93,85 @@ export default function Products() {
                 </p>
             )}
 
-            {loading ? (
-                <p>Cargando...</p>
-            ) : (
-                <div className="admin-products__table">
-                    <div className="admin-products__row admin-products__row--header">
-                        <span>Producto</span>
-                        <span>Precio</span>
-                        <span>Estado</span>
-                        <span />
-                    </div>
+            <section className="admin-products__table-container">
+                {loading ? (
+                    <p>Cargando...</p>
+                ) : products.length === 0 ? (
+                    <p>No hay productos registrados.</p>
+                ) : (
+                    <table className="admin-products__table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Precio</th>
+                                <th>Estado</th>
+                                <th>Destacado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
 
-                    {products.map((product) => (
-                        <div
-                            key={product.id}
-                            className="admin-products__row"
-                        >
-                            <span>{product.name}</span>
+                        <tbody>
+                            {products.map((product) => (
+                                <tr key={product.id}>
+                                    <td>
+                                        <strong>
+                                            {product.name}
+                                        </strong>
 
-                            <span>
-                                S/ {product.price.toFixed(2)}
-                            </span>
+                                        <small>
+                                            {product.slug}
+                                        </small>
+                                    </td>
 
-                            <span>
-                                {product.published
-                                    ? 'Publicado'
-                                    : 'Oculto'}
-                            </span>
+                                    <td>
+                                        S/ {product.price.toFixed(2)}
+                                    </td>
 
-                            <span className="admin-products__actions">
-                                <Link
-                                    to={`/admin/products/${product.id}`}
-                                >
-                                    Editar
-                                </Link>
+                                    <td>
+                                        {product.published
+                                            ? 'Publicado'
+                                            : 'Borrador'}
+                                    </td>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleDelete(product.id);
-                                    }}
-                                >
-                                    Eliminar
-                                </button>
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            )}
+                                    <td>
+                                        {product.featured
+                                            ? 'Sí'
+                                            : 'No'}
+                                    </td>
+
+                                    <td>
+                                        <div className="admin-products__actions">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/admin/products/${product.id}/edit`,
+                                                    )
+                                                }
+                                                className="admin-products__edit"
+                                            >
+                                                Editar
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleDelete(
+                                                        product.id,
+                                                    )
+                                                }
+                                                className="admin-products__delete"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </section>
         </main>
     );
 }
