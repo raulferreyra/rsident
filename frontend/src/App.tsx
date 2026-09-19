@@ -19,6 +19,8 @@ import Catalog from './admin/pages/Catalog';
 import Products from './admin/pages/Products';
 import ProductForm from './admin/pages/ProductForm';
 
+import './App.css';
+
 function Home() {
   return (
     <main>
