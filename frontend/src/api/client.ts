@@ -14,20 +14,68 @@ async function request<T>(
 
     const token = await user.getIdToken();
 
-    const response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            ...options.headers,
+    const response = await fetch(
+        `${API_URL}${path}`,
+        {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+                ...options.headers,
+            },
         },
-    });
+    );
 
     if (!response.ok) {
         const body = await response.json().catch(() => null);
 
         throw new Error(
             body?.error ?? 'Error en la solicitud',
+        );
+    }
+
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
+    return response.json();
+}
+
+export async function uploadFile<T>(
+    path: string,
+    file: File,
+): Promise<T> {
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new Error('Usuario no autenticado');
+    }
+
+    const token = await user.getIdToken();
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(
+        `${API_URL}${path}`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        const body =
+            await response.json().catch(
+                () => null,
+            );
+
+        throw new Error(
+            body?.error ??
+            'Error al subir el archivo',
         );
     }
 

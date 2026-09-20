@@ -11,6 +11,7 @@ import (
 
 	"github.com/raulferreyra/rsident/backend/internal/config"
 	"github.com/raulferreyra/rsident/backend/internal/routes"
+	"github.com/raulferreyra/rsident/backend/internal/services"
 )
 
 func main() {
@@ -34,6 +35,8 @@ func main() {
 
 	router := gin.Default()
 
+	router.Static("/uploads", "./uploads")
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",
@@ -53,9 +56,19 @@ func main() {
 		},
 	}))
 
+	catalogService := services.NewCatalogService(
+		firebase.Firestore,
+	)
+
+	productService := services.NewProductService(
+		firebase.Firestore,
+	)
+
 	routes.Setup(
 		router,
 		firebase.Auth,
+		catalogService,
+		productService,
 	)
 
 	log.Printf(

@@ -1,0 +1,168 @@
+.admin-catalog {
+    min-height: 100vh;
+    padding: 40px;
+}
+
+.admin-catalog__header {
+    margin-bottom: 50px;
+}
+
+.admin-catalog__header span {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+}
+
+.admin-catalog__header h1 {
+    margin: 8px 0 0;
+    font-size: 2rem;
+    font-weight: 500;
+}
+
+.admin-catalog__form {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+
+    margin-bottom: 50px;
+}
+
+.admin-catalog__form>div {
+    width: 360px;
+}
+
+.admin-catalog__form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+}
+
+.admin-catalog__form input {
+    width: 100%;
+    padding: 12px 0;
+
+    border: 0;
+    border-bottom: 1px solid #111;
+
+    outline: none;
+    background: transparent;
+
+    font: inherit;
+}
+
+.admin-catalog__form button {
+    padding: 11px 18px;
+
+    border: 1px solid #111;
+
+    background: #111;
+    color: #fff;
+
+    font: inherit;
+    cursor: pointer;
+}
+
+.admin-catalog__form button[type='button'] {
+    background: transparent;
+    color: #111;
+}
+
+.admin-catalog__error {
+    margin-bottom: 30px;
+}
+
+.admin-catalog__table {
+    width: 100%;
+}
+
+.admin-catalog__row {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr 180px;
+
+    align-items: center;
+
+    min-height: 58px;
+
+    border-bottom: 1px solid #ddd;
+
+    font-size: 0.85rem;
+}
+
+.admin-catalog__row--header {
+    border-top: 1px solid #111;
+    border-bottom-color: #111;
+
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.admin-catalog__actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-catalog__actions button {
+    border: 0;
+    background: transparent;
+
+    font: inherit;
+    cursor: pointer;
+}
+
+@media (max-width: 767px) {
+    .admin-catalog {
+        padding: 24px 20px;
+    }
+
+    .admin-catalog__form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-catalog__form>div {
+        width: 100%;
+    }
+
+    .admin-catalog__row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+
+        padding: 16px 0;
+    }
+
+    .admin-catalog__row--header {
+        display: none;
+    }
+}
+
+.admin-catalog__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-catalog__actions button {
+    padding: 7px 12px;
+    border: 1px solid #111;
+    background: transparent;
+    color: #111;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.admin-catalog__edit:hover {
+    background: #111;
+    color: #fff;
+}
+
+.admin-catalog__delete {
+    border-color: #999 !important;
+    color: #666 !important;
+}
+
+.admin-catalog__delete:hover {
+    background: #666;
+    border-color: #666 !important;
+    color: #fff !important;
+}

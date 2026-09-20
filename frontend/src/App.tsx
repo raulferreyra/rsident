@@ -1,4 +1,9 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 
 import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
@@ -6,9 +11,15 @@ import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
 
 // Admin pages
+import AdminNavbar from './admin/components/AdminNavbar';
 import ProtectedRoute from './admin/components/ProtectedRoute';
 import Login from './admin/pages/Login';
 import Dashboard from './admin/pages/Dashboard';
+import Catalog from './admin/pages/Catalog';
+import Products from './admin/pages/Products';
+import ProductForm from './admin/pages/ProductForm';
+
+import './App.css';
 
 function Home() {
   return (
@@ -43,7 +54,11 @@ function PublicLayout() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/tienda" element={<Shop />} />
+        <Route
+          path="/tienda"
+          element={<Shop />}
+        />
+
         <Route
           path="/tienda/:category"
           element={<ShopFilter />}
@@ -78,16 +93,89 @@ function AdminRoutes() {
           path="/admin/dashboard"
           element={<Dashboard />}
         />
+
+        <Route
+          path="/admin/categories"
+          element={
+            <Catalog
+              type="categories"
+              title="Categorías"
+            />
+          }
+        />
+
+        <Route
+          path="/admin/collections"
+          element={
+            <Catalog
+              type="collections"
+              title="Colecciones"
+            />
+          }
+        />
+
+        <Route
+          path="/admin/tags"
+          element={
+            <Catalog
+              type="tags"
+              title="Etiquetas"
+            />
+          }
+        />
+
+        <Route
+          path="/admin/products"
+          element={<Products />}
+        />
+
+        <Route
+          path="/admin/products/new"
+          element={<ProductForm />}
+        />
+
+        <Route
+          path="/admin/products/:id/edit"
+          element={<ProductForm />}
+        />
       </Route>
     </Routes>
   );
 }
 
+function AdminLayout() {
+  return (
+    <>
+      <AdminNavbar />
+      <AdminRoutes />
+    </>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+
+  const isAdminRoute =
+    location.pathname.startsWith('/admin');
+
+  const isAdminLogin =
+    location.pathname === '/admin/login';
+
+  if (isAdminRoute) {
+    if (isAdminLogin) {
+      return <AdminRoutes />;
+    }
+
+    return <AdminLayout />;
+  }
+
+  return <PublicLayout />;
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <PublicLayout />
-      <AdminRoutes />
+      <AppContent />
     </BrowserRouter>
   );
 }

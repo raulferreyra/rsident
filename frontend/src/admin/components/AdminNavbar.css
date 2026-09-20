@@ -1,0 +1,106 @@
+.admin-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+    min-height: 64px;
+    padding: 0 28px;
+
+    background: #111;
+    color: #fff;
+}
+
+.admin-navbar__brand {
+    margin-right: 40px;
+
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.admin-navbar__links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.admin-navbar__link {
+    color: #fff;
+    text-decoration: none;
+
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+
+    opacity: 0.7;
+
+    transition: opacity 0.2s ease;
+}
+
+.admin-navbar__link:hover,
+.admin-navbar__link--active {
+    opacity: 1;
+}
+
+.admin-navbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-left: auto;
+}
+
+.admin-navbar__public {
+    color: #fff;
+    text-decoration: none;
+
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.admin-navbar__public:hover {
+    opacity: 1;
+}
+
+.admin-navbar__logout {
+    padding: 8px 14px;
+
+    border: 1px solid #fff;
+    background: transparent;
+    color: #fff;
+
+    font: inherit;
+    font-size: 0.8rem;
+
+    cursor: pointer;
+}
+
+.admin-navbar__logout:hover {
+    background: #fff;
+    color: #111;
+}
+
+@media (max-width: 900px) {
+    .admin-navbar {
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 16px 20px;
+    }
+
+    .admin-navbar__brand {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .admin-navbar__links {
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .admin-navbar__actions {
+        margin-left: 0;
+    }
+}
