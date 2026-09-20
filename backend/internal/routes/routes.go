@@ -74,7 +74,10 @@ func Setup(
 
 	admin.GET(
 		"/products",
-		productHandler.List,
+		func(c *gin.Context) {
+			c.Set("admin", true)
+			productHandler.List(c)
+		},
 	)
 	admin.POST(
 		"/products",
@@ -88,7 +91,6 @@ func Setup(
 		"/products/:id",
 		productHandler.Delete,
 	)
-
 	admin.POST(
 		"/products/:id/images",
 		handlers.UploadProductImage,

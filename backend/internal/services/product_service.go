@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -37,26 +38,38 @@ func (s *ProductService) List(
 		)
 	}
 
-	docs, err := query.
-		Documents(ctx).
-		GetAll()
+	docs, err := query.Documents(ctx).GetAll()
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"error listando productos: %w",
+			err,
+		)
 	}
 
-	products := make([]models.Product, 0, len(docs))
+	products := make(
+		[]models.Product,
+		0,
+		len(docs),
+	)
 
 	for _, doc := range docs {
 		var product models.Product
 
 		if err := doc.DataTo(&product); err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"error convirtiendo producto %s: %w",
+				doc.Ref.ID,
+				err,
+			)
 		}
 
 		product.ID = doc.Ref.ID
 
-		products = append(products, product)
+		products = append(
+			products,
+			product,
+		)
 	}
 
 	return products, nil

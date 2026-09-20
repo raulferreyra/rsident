@@ -31,7 +31,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudieron obtener los productos",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -102,7 +102,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo crear el producto",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -137,7 +137,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo actualizar el producto",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -155,7 +155,7 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo eliminar el producto",
+			"error": err.Error(),
 		})
 		return
 	}
