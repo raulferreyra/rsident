@@ -79,6 +79,13 @@ func Setup(
 			productHandler.List(c)
 		},
 	)
+	admin.GET(
+		"/products/:id",
+		func(c *gin.Context) {
+			c.Set("admin", true)
+			productHandler.Get(c)
+		},
+	)
 	admin.POST(
 		"/products",
 		productHandler.Create,
