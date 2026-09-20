@@ -23,14 +23,16 @@ func NewCatalogHandler(
 
 func (h *CatalogHandler) List(c *gin.Context) {
 	collection := c.Param("collection")
+	admin := c.GetBool("admin")
 
 	items, err := h.service.List(
 		c.Request.Context(),
 		collection,
+		admin,
 	)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return

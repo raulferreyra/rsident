@@ -51,19 +51,20 @@ func NewCatalogService(
 func (s *CatalogService) List(
 	ctx context.Context,
 	collection string,
-) ([]models.CatalogItem, error) {
-	if err := ValidateCatalogCollection(collection); err != nil {
-		return nil, err
+	admin bool,
+) (
+	[]models.CatalogItem,
+	error,
+) {
+	query := s.db.Collection(collection).Query
+
+	if !admin {
+		query = query.Where("active", "==", true)
 	}
 
-	docs, err := s.db.
-		Collection(collection).
-		OrderBy("name", firestore.Asc).
-		Documents(ctx).
-		GetAll()
-
+	docs, err := query.Documents(ctx).GetAll()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listando catálogo: %w", err)
 	}
 
 	items := make([]models.CatalogItem, 0, len(docs))
@@ -72,11 +73,10 @@ func (s *CatalogService) List(
 		var item models.CatalogItem
 
 		if err := doc.DataTo(&item); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error convirtiendo catálogo %s: %w", doc.Ref.ID, err)
 		}
 
 		item.ID = doc.Ref.ID
-
 		items = append(items, item)
 	}
 
