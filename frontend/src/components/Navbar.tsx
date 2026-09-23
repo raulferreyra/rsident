@@ -2,26 +2,21 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import logoHeader from '../assets/logo-header.png';
 import { publicApi } from '../api/client';
+import type { CatalogItem, Product } from '../types';
 import './Navbar.css';
-
-interface CatalogItem {
-    id: string;
-    name: string;
-    slug: string;
-    active: boolean;
-}
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [categories, setCategories] = useState<CatalogItem[]>([]);
     const [collections, setCollections] = useState<CatalogItem[]>([]);
-    const [cartCount, setCartCount] = useState(0);
+    const [cartCount] = useState(0);
 
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
         };
 
+        handleScroll();
         window.addEventListener('scroll', handleScroll);
 
         return () => {
@@ -32,15 +27,36 @@ export default function Navbar() {
     useEffect(() => {
         const loadCatalog = async () => {
             try {
-                const [categoriesResult, collectionsResult] = await Promise.all([
-                    publicApi.get<CatalogItem[]>('/catalog/categories'),
-                    publicApi.get<CatalogItem[]>('/catalog/collections'),
-                ]);
+                const [categoriesResult, collectionsResult, productsResult] =
+                    await Promise.all([
+                        publicApi.get<CatalogItem[]>('/catalog/categories'),
+                        publicApi.get<CatalogItem[]>('/catalog/collections'),
+                        publicApi.get<Product[]>('/products'),
+                    ]);
 
-                setCategories(categoriesResult);
-                setCollections(collectionsResult);
+                const products = productsResult.filter(
+                    (product) => product.published,
+                );
+
+                setCategories(
+                    categoriesResult.filter((category) =>
+                        products.some(
+                            (product) => product.categoryId === category.id,
+                        ),
+                    ),
+                );
+
+                setCollections(
+                    collectionsResult.filter((collection) =>
+                        products.some(
+                            (product) => product.collectionId === collection.id,
+                        ),
+                    ),
+                );
             } catch (error) {
                 console.error('Error cargando navegación:', error);
+                setCategories([]);
+                setCollections([]);
             }
         };
 
@@ -58,17 +74,19 @@ export default function Navbar() {
                     TIENDA
                 </Link>
 
-                <div className="navbar__submenu">
-                    {categories.map((category) => (
-                        <Link
-                            key={category.id}
-                            to={`/tienda/${category.slug}`}
-                            className="navbar__submenu-link"
-                        >
-                            {category.name}
-                        </Link>
-                    ))}
-                </div>
+                {categories.length > 0 && (
+                    <div className="navbar__submenu">
+                        {categories.map((category) => (
+                            <Link
+                                key={category.id}
+                                to={`/tienda/${category.slug}`}
+                                className="navbar__submenu-link"
+                            >
+                                {category.name}
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="navbar__item">
@@ -76,20 +94,26 @@ export default function Navbar() {
                     COLECCIONES
                 </Link>
 
-                <div className="navbar__submenu">
-                    {collections.map((collection) => (
-                        <Link
-                            key={collection.id}
-                            to={`/colecciones/${collection.slug}`}
-                            className="navbar__submenu-link"
-                        >
-                            {collection.name}
-                        </Link>
-                    ))}
-                </div>
+                {collections.length > 0 && (
+                    <div className="navbar__submenu">
+                        {collections.map((collection) => (
+                            <Link
+                                key={collection.id}
+                                to={`/colecciones/${collection.slug}`}
+                                className="navbar__submenu-link"
+                            >
+                                {collection.name}
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            <Link to="/carrito" className="navbar__cart" aria-label="Carrito de compra">
+            <Link
+                to="/carrito"
+                className="navbar__cart"
+                aria-label="Carrito de compra"
+            >
                 <span className="navbar__cart-icon">
                     <svg
                         viewBox="0 0 24 24"
@@ -101,9 +125,11 @@ export default function Navbar() {
                     </svg>
                 </span>
 
-                <span className="navbar__cart-count">
-                    {Math.min(cartCount, 99)}
-                </span>
+                {cartCount > 0 && (
+                    <span className="navbar__cart-count">
+                        {Math.min(cartCount, 99)}
+                    </span>
+                )}
             </Link>
         </nav>
     );
