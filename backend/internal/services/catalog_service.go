@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/models"
 )
 
@@ -43,6 +44,11 @@ func (s *CatalogService) Exists(
 func NewCatalogService(
 	db *firestore.Client,
 ) *CatalogService {
+	logging.App.Printf(
+		"NewCatalogService recibido db=%p",
+		db,
+	)
+
 	return &CatalogService{
 		db: db,
 	}
