@@ -62,6 +62,14 @@ func (s *CatalogService) List(
 	[]models.CatalogItem,
 	error,
 ) {
+	logging.App.Printf(
+		"CatalogService.List collection=%s admin=%t service=%p db=%p",
+		collection,
+		admin,
+		s,
+		s.db,
+	)
+
 	query := s.db.Collection(collection).Query
 
 	if !admin {
