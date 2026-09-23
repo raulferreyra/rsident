@@ -31,15 +31,17 @@ func Setup(
 		productService,
 	)
 
-	api.GET("/catalog/categories", func(c *gin.Context) {
-		c.Set("admin", false)
-		catalogHandler.List(c)
-	})
+	api.GET("/catalog/categories",
+		func(c *gin.Context) {
+			c.Set("admin", false)
+			catalogHandler.List(c)
+		})
 
-	api.GET("/catalog/collections", func(c *gin.Context) {
-		c.Set("admin", false)
-		catalogHandler.List(c)
-	})
+	api.GET("/catalog/collections",
+		func(c *gin.Context) {
+			c.Set("admin", false)
+			catalogHandler.List(c)
+		})
 
 	api.GET(
 		"/products",
@@ -64,10 +66,12 @@ func Setup(
 		"/dashboard",
 		handlers.Dashboard,
 	)
-
 	admin.GET(
 		"/catalog/:collection",
-		catalogHandler.List,
+		func(c *gin.Context) {
+			c.Set("admin", true)
+			catalogHandler.List(c)
+		},
 	)
 	admin.POST(
 		"/catalog/:collection",

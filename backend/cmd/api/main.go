@@ -25,6 +25,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if firebase == nil {
+		log.Fatal("ERROR: firebase es nil")
+	}
+
+	if firebase.Firestore == nil {
+		log.Fatal("ERROR: firebase.Firestore es nil")
+	}
+
+	if firebase.Auth == nil {
+		log.Fatal("ERROR: firebase.Auth es nil")
+	}
+
+	log.Println("Firebase inicializado correctamente")
+	log.Printf("Firestore: %v", firebase.Firestore)
+	log.Printf("Auth: %v", firebase.Auth)
+
 	defer firebase.Firestore.Close()
 
 	port := os.Getenv("PORT")
@@ -59,6 +75,10 @@ func main() {
 	catalogService := services.NewCatalogService(
 		firebase.Firestore,
 	)
+
+	if catalogService == nil {
+		log.Fatal("ERROR: catalogService es nil")
+	}
 
 	productService := services.NewProductService(
 		firebase.Firestore,
