@@ -94,3 +94,7 @@
         display: none;
     }
 }
+.best-sellers__loading {
+    margin: 0;
+    padding: 40px 0;
+}
