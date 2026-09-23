@@ -31,19 +31,34 @@ func Init() error {
 		return fmt.Errorf("error limpiando logs antiguos: %w", err)
 	}
 
-	appFile, err := openLogFile("app.log")
+	if err := rotate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func rotate() error {
+	Close()
+
+	date := time.Now().Format("2006-01-02")
+
+	var err error
+
+	appFile, err = openLogFile(
+		fmt.Sprintf("app-%s.log", date),
+	)
 	if err != nil {
 		return err
 	}
 
-	errorFile, err := openLogFile("error.log")
+	errorFile, err = openLogFile(
+		fmt.Sprintf("error-%s.log", date),
+	)
 	if err != nil {
 		appFile.Close()
 		return err
 	}
-
-	appFile = appFile
-	errorFile = errorFile
 
 	App = log.New(
 		io.MultiWriter(os.Stdout, appFile),
@@ -58,16 +73,6 @@ func Init() error {
 	)
 
 	return nil
-}
-
-func Close() {
-	if appFile != nil {
-		appFile.Close()
-	}
-
-	if errorFile != nil {
-		errorFile.Close()
-	}
 }
 
 func openLogFile(name string) (*os.File, error) {
@@ -109,7 +114,10 @@ func cleanOldLogs() error {
 		}
 
 		if info.ModTime().Before(cutoff) {
-			path := filepath.Join(logDirectory, entry.Name())
+			path := filepath.Join(
+				logDirectory,
+				entry.Name(),
+			)
 
 			if err := os.Remove(path); err != nil {
 				return err
@@ -118,4 +126,16 @@ func cleanOldLogs() error {
 	}
 
 	return nil
+}
+
+func Close() {
+	if appFile != nil {
+		_ = appFile.Close()
+		appFile = nil
+	}
+
+	if errorFile != nil {
+		_ = errorFile.Close()
+		errorFile = nil
+	}
 }
