@@ -31,17 +31,15 @@ func Setup(
 		productService,
 	)
 
-	api.GET("/catalog/categories",
-		func(c *gin.Context) {
-			c.Set("admin", false)
-			catalogHandler.List(c)
-		})
+	api.GET("/catalog/categories", func(c *gin.Context) {
+		c.Set("admin", false)
+		catalogHandler.ListCollection(c, "categories")
+	})
 
-	api.GET("/catalog/collections",
-		func(c *gin.Context) {
-			c.Set("admin", false)
-			catalogHandler.List(c)
-		})
+	api.GET("/catalog/collections", func(c *gin.Context) {
+		c.Set("admin", false)
+		catalogHandler.ListCollection(c, "collections")
+	})
 
 	api.GET(
 		"/products",

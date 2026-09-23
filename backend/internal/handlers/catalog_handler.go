@@ -22,7 +22,20 @@ func NewCatalogHandler(
 }
 
 func (h *CatalogHandler) List(c *gin.Context) {
-	collection := c.Param("collection")
+	h.list(c, c.Param("collection"))
+}
+
+func (h *CatalogHandler) ListCollection(
+	c *gin.Context,
+	collection string,
+) {
+	h.list(c, collection)
+}
+
+func (h *CatalogHandler) list(
+	c *gin.Context,
+	collection string,
+) {
 	admin := c.GetBool("admin")
 
 	items, err := h.service.List(
