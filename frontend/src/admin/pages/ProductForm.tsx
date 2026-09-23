@@ -117,16 +117,6 @@ function getImageURL(url: string) {
     return `${BACKEND_URL}${url}`;
 }
 
-function getFileExtension(file: File) {
-    const extension = file.name.split('.').pop();
-
-    if (!extension) {
-        return 'jpg';
-    }
-
-    return extension.toLowerCase();
-}
-
 export default function ProductForm() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -501,48 +491,6 @@ export default function ProductForm() {
                     stock,
                 },
             ],
-        });
-    };
-
-    const updateVariantSKU = (
-        colorID: string,
-        size: string,
-        sku: string,
-    ) => {
-        const existing = getVariant(
-            colorID,
-            size,
-        );
-
-        if (!existing) {
-            updateProduct({
-                variants: [
-                    ...product.variants,
-                    {
-                        id: crypto.randomUUID(),
-                        colorId: colorID,
-                        size,
-                        sku,
-                        stock: 0,
-                    },
-                ],
-            });
-
-            return;
-        }
-
-        updateProduct({
-            variants:
-                product.variants.map(
-                    (variant) =>
-                        variant.id ===
-                            existing.id
-                            ? {
-                                ...variant,
-                                sku,
-                            }
-                            : variant,
-                ),
         });
     };
 
