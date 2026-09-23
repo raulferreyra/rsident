@@ -56,7 +56,18 @@ func main() {
 		port = "8080"
 	}
 
-	router := gin.Default()
+	router := gin.New()
+
+	router.Use(gin.Logger())
+
+	router.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
+		logging.Error.Printf(
+			"PANIC RECUPERADO: %v",
+			recovered,
+		)
+
+		c.AbortWithStatus(500)
+	}))
 
 	router.Static("/uploads", "./uploads")
 
