@@ -10,11 +10,18 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/raulferreyra/rsident/backend/internal/config"
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/routes"
 	"github.com/raulferreyra/rsident/backend/internal/services"
 )
 
 func main() {
+	if err := logging.Init(); err != nil {
+		log.Fatal(err)
+	}
+
+	defer logging.Close()
+
 	_ = godotenv.Load()
 
 	ctx := context.Background()
@@ -49,7 +56,18 @@ func main() {
 		port = "8080"
 	}
 
-	router := gin.Default()
+	router := gin.New()
+
+	router.Use(gin.Logger())
+
+	router.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
+		logging.Error.Printf(
+			"PANIC RECUPERADO: %v",
+			recovered,
+		)
+
+		c.AbortWithStatus(500)
+	}))
 
 	router.Static("/uploads", "./uploads")
 
@@ -73,6 +91,11 @@ func main() {
 	}))
 
 	catalogService := services.NewCatalogService(
+		firebase.Firestore,
+	)
+
+	logging.App.Printf(
+		"CatalogService creado. Firestore=%p",
 		firebase.Firestore,
 	)
 

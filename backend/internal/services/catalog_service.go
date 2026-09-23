@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/models"
 )
 
@@ -43,6 +44,11 @@ func (s *CatalogService) Exists(
 func NewCatalogService(
 	db *firestore.Client,
 ) *CatalogService {
+	logging.App.Printf(
+		"NewCatalogService recibido db=%p",
+		db,
+	)
+
 	return &CatalogService{
 		db: db,
 	}
@@ -56,6 +62,14 @@ func (s *CatalogService) List(
 	[]models.CatalogItem,
 	error,
 ) {
+	logging.App.Printf(
+		"CatalogService.List collection=%s admin=%t service=%p db=%p",
+		collection,
+		admin,
+		s,
+		s.db,
+	)
+
 	query := s.db.Collection(collection).Query
 
 	if !admin {
