@@ -10,11 +10,18 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/raulferreyra/rsident/backend/internal/config"
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/routes"
 	"github.com/raulferreyra/rsident/backend/internal/services"
 )
 
 func main() {
+	if err := logging.Init(); err != nil {
+		log.Fatal(err)
+	}
+
+	defer logging.Close()
+
 	_ = godotenv.Load()
 
 	ctx := context.Background()
