@@ -83,6 +83,11 @@ func main() {
 		firebase.Firestore,
 	)
 
+	logging.App.Printf(
+		"CatalogService creado. Firestore=%p",
+		firebase.Firestore,
+	)
+
 	if catalogService == nil {
 		log.Fatal("ERROR: catalogService es nil")
 	}
