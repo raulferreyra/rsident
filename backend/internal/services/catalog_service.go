@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/models"
 )
 
@@ -43,6 +44,11 @@ func (s *CatalogService) Exists(
 func NewCatalogService(
 	db *firestore.Client,
 ) *CatalogService {
+	logging.App.Printf(
+		"NewCatalogService recibido db=%p",
+		db,
+	)
+
 	return &CatalogService{
 		db: db,
 	}
@@ -51,19 +57,28 @@ func NewCatalogService(
 func (s *CatalogService) List(
 	ctx context.Context,
 	collection string,
-) ([]models.CatalogItem, error) {
-	if err := ValidateCatalogCollection(collection); err != nil {
-		return nil, err
+	admin bool,
+) (
+	[]models.CatalogItem,
+	error,
+) {
+	logging.App.Printf(
+		"CatalogService.List collection=%s admin=%t service=%p db=%p",
+		collection,
+		admin,
+		s,
+		s.db,
+	)
+
+	query := s.db.Collection(collection).Query
+
+	if !admin {
+		query = query.Where("active", "==", true)
 	}
 
-	docs, err := s.db.
-		Collection(collection).
-		OrderBy("name", firestore.Asc).
-		Documents(ctx).
-		GetAll()
-
+	docs, err := query.Documents(ctx).GetAll()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listando catálogo: %w", err)
 	}
 
 	items := make([]models.CatalogItem, 0, len(docs))
@@ -72,11 +87,10 @@ func (s *CatalogService) List(
 		var item models.CatalogItem
 
 		if err := doc.DataTo(&item); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error convirtiendo catálogo %s: %w", doc.Ref.ID, err)
 		}
 
 		item.ID = doc.Ref.ID
-
 		items = append(items, item)
 	}
 

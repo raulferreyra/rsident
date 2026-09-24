@@ -9,6 +9,11 @@ import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
 import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
+import Shop from './pages/Shop';
+import ShopFilter from './pages/ShopFilter';
+import Collections from './pages/Collections';
+import Collection from './pages/Collection';
+import ProductPage from './pages/Product';
 
 // Admin pages
 import AdminNavbar from './admin/components/AdminNavbar';
@@ -28,22 +33,6 @@ function Home() {
       <BestSellers />
     </main>
   );
-}
-
-function Shop() {
-  return <main>Tienda</main>;
-}
-
-function ShopFilter() {
-  return <main>Filtro de tienda</main>;
-}
-
-function Collections() {
-  return <main>Colecciones</main>;
-}
-
-function Collection() {
-  return <main>Colección</main>;
 }
 
 function PublicLayout() {
@@ -72,6 +61,11 @@ function PublicLayout() {
         <Route
           path="/colecciones/:collection"
           element={<Collection />}
+        />
+
+        <Route
+          path="/producto/:id"
+          element={<ProductPage />}
         />
       </Routes>
 

@@ -31,6 +31,16 @@ func Setup(
 		productService,
 	)
 
+	api.GET("/catalog/categories", func(c *gin.Context) {
+		c.Set("admin", false)
+		catalogHandler.ListCollection(c, "categories")
+	})
+
+	api.GET("/catalog/collections", func(c *gin.Context) {
+		c.Set("admin", false)
+		catalogHandler.ListCollection(c, "collections")
+	})
+
 	api.GET(
 		"/products",
 		func(c *gin.Context) {
@@ -54,10 +64,12 @@ func Setup(
 		"/dashboard",
 		handlers.Dashboard,
 	)
-
 	admin.GET(
 		"/catalog/:collection",
-		catalogHandler.List,
+		func(c *gin.Context) {
+			c.Set("admin", true)
+			catalogHandler.List(c)
+		},
 	)
 	admin.POST(
 		"/catalog/:collection",
