@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"runtime/debug"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -62,8 +63,9 @@ func main() {
 
 	router.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
 		logging.Error.Printf(
-			"PANIC RECUPERADO: %v",
+			"PANIC RECUPERADO: %v\n%s",
 			recovered,
+			debug.Stack(),
 		)
 
 		c.AbortWithStatus(500)
