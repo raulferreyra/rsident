@@ -135,6 +135,7 @@
     gap: 8px;
     padding: 7px 10px;
     border: 1px solid #ddd;
+    color: #ddd;
     background: transparent;
     font: inherit;
     cursor: pointer;
@@ -142,10 +143,11 @@
 
 .product-page__color--active {
     border-color: #111;
+    color: #111;
 }
 
 .product-page__color img,
-.product-page__color > span {
+.product-page__color>span {
     display: block;
     width: 24px;
     height: 24px;
@@ -162,6 +164,7 @@
     min-width: 44px;
     padding: 10px 12px;
     border: 1px solid #ddd;
+    color: #ddd;
     background: transparent;
     font: inherit;
     cursor: pointer;
@@ -170,7 +173,7 @@
 .product-page__size--active {
     border-color: #111;
     background: #111;
-    color: #fff;
+    color: #ddd;
 }
 
 .product-page__size:disabled {
