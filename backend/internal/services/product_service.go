@@ -3,10 +3,12 @@ package services
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
 
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/models"
 )
 
@@ -26,9 +28,14 @@ func (s *ProductService) List(
 	ctx context.Context,
 	admin bool,
 ) ([]models.Product, error) {
-	query := s.db.
-		Collection("products").
-		OrderBy("createdAt", firestore.Desc)
+	logging.App.Printf(
+		"ProductService.List admin=%t service=%p db=%p",
+		admin,
+		s,
+		s.db,
+	)
+
+	query := s.db.Collection("products").Query
 
 	if !admin {
 		query = query.Where(
@@ -41,6 +48,11 @@ func (s *ProductService) List(
 	docs, err := query.Documents(ctx).GetAll()
 
 	if err != nil {
+		logging.Error.Printf(
+			"ProductService.List error consultando Firestore: %v",
+			err,
+		)
+
 		return nil, fmt.Errorf(
 			"error listando productos: %w",
 			err,
@@ -57,6 +69,12 @@ func (s *ProductService) List(
 		var product models.Product
 
 		if err := doc.DataTo(&product); err != nil {
+			logging.Error.Printf(
+				"ProductService.List error convirtiendo producto id=%s: %v",
+				doc.Ref.ID,
+				err,
+			)
+
 			return nil, fmt.Errorf(
 				"error convirtiendo producto %s: %w",
 				doc.Ref.ID,
@@ -71,6 +89,16 @@ func (s *ProductService) List(
 			product,
 		)
 	}
+
+	sort.SliceStable(products, func(i, j int) bool {
+		return products[i].CreatedAt.After(products[j].CreatedAt)
+	})
+
+	logging.App.Printf(
+		"ProductService.List encontrados=%d admin=%t",
+		len(products),
+		admin,
+	)
 
 	return products, nil
 }
