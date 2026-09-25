@@ -139,3 +139,31 @@ async function publicRequest<T>(
 
     return response.json();
 }
+export async function publicUpload<T>(
+    path: string,
+    fields: Record<string, string>,
+    file: File,
+): Promise<T> {
+    const formData = new FormData();
+
+    Object.entries(fields).forEach(([key, value]) => {
+        formData.append(key, value);
+    });
+
+    formData.append('paymentProof', file);
+
+    const response = await fetch(`${API_URL}${path}`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+
+        throw new Error(
+            body?.error ?? 'Error al procesar la solicitud',
+        );
+    }
+
+    return response.json();
+}
