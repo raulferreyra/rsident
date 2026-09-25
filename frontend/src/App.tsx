@@ -14,6 +14,10 @@ import ShopFilter from './pages/ShopFilter';
 import Collections from './pages/Collections';
 import Collection from './pages/Collection';
 import ProductPage from './pages/Product';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+import { CartProvider } from './cart';
 
 // Admin pages
 import AdminNavbar from './admin/components/AdminNavbar';
@@ -66,6 +70,21 @@ function PublicLayout() {
         <Route
           path="/producto/:id"
           element={<ProductPage />}
+        />
+
+        <Route
+          path="/carrito"
+          element={<Cart />}
+        />
+
+        <Route
+          path="/checkout"
+          element={<Checkout />}
+        />
+
+        <Route
+          path="/compra-confirmada/:orderNumber"
+          element={<OrderConfirmation />}
         />
       </Routes>
 
@@ -168,9 +187,11 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <CartProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </CartProvider>
   );
 }
 
