@@ -14,6 +14,7 @@ func Setup(
 	authClient *auth.Client,
 	catalogService *services.CatalogService,
 	productService *services.ProductService,
+	orderService *services.OrderService,
 ) {
 	api := router.Group("/api")
 
@@ -29,6 +30,10 @@ func Setup(
 
 	productHandler := handlers.NewProductHandler(
 		productService,
+	)
+
+	orderHandler := handlers.NewOrderHandler(
+		orderService,
 	)
 
 	api.GET("/catalog/categories", func(c *gin.Context) {
@@ -56,6 +61,8 @@ func Setup(
 			productHandler.Get(c)
 		},
 	)
+
+	api.POST("/orders", orderHandler.Create)
 
 	admin := api.Group("/admin")
 	admin.Use(middleware.FirebaseAuth(authClient))

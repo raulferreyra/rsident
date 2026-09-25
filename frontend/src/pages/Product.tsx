@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { publicApi } from '../api/client';
+import { useCart } from '../cart';
 import type { CatalogItem, Product } from '../types';
 import { formatPrice, getImageURL, hasDiscount } from '../utils';
 import './Product.css';
@@ -16,6 +17,8 @@ export default function ProductPage() {
     const [selectedSize, setSelectedSize] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [added, setAdded] = useState(false);
+    const { addItem } = useCart();
 
     useEffect(() => {
         const load = async () => {
@@ -246,6 +249,13 @@ export default function ProductPage() {
                         </p>
                     )}
 
+                    {added && (
+                        <div className="product-page__added" role="status">
+                            Producto agregado al carrito.
+                            <Link to="/carrito">Ver carrito</Link>
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         className="product-page__action"
@@ -253,6 +263,25 @@ export default function ProductPage() {
                             product.variants.length > 0 &&
                             (!selectedColor || !selectedSize || !selectedVariant)
                         }
+                        onClick={() => {
+                            const selectedColorData = product.colors.find(
+                                (color) => color.id === selectedColor,
+                            );
+
+                            addItem({
+                                productId: product.id,
+                                variantId: selectedVariant?.id ?? '',
+                                productName: product.name,
+                                colorId: selectedColor,
+                                colorName: selectedColorData?.name ?? '',
+                                size: selectedVariant?.size ?? '',
+                                sku: selectedVariant?.sku ?? '',
+                                price: product.price,
+                                imageUrl: currentImage?.url ?? '',
+                            });
+
+                            setAdded(true);
+                        }}
                     >
                         Agregar al carrito
                     </button>

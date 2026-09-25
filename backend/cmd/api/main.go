@@ -109,11 +109,18 @@ func main() {
 		firebase.Firestore,
 	)
 
+	mailer := services.NewMailerFromEnv()
+	orderService := services.NewOrderService(
+		firebase.Firestore,
+		mailer,
+	)
+
 	routes.Setup(
 		router,
 		firebase.Auth,
 		catalogService,
 		productService,
+		orderService,
 	)
 
 	log.Printf(

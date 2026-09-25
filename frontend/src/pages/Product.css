@@ -230,3 +230,20 @@
         position: static;
     }
 }
+
+
+.product-page__added {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    background: #edf6e9;
+    color: #315528;
+    font-size: 0.78rem;
+}
+
+.product-page__added a {
+    color: inherit;
+    font-weight: 600;
+}
