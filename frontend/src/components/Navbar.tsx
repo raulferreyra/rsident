@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import logoHeader from '../assets/logo-header.png';
 import { publicApi } from '../api/client';
+import { useCart } from '../cart';
 import type { CatalogItem, Product } from '../types';
 import './Navbar.css';
 
@@ -9,7 +10,7 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [categories, setCategories] = useState<CatalogItem[]>([]);
     const [collections, setCollections] = useState<CatalogItem[]>([]);
-    const [cartCount] = useState(0);
+    const { count: cartCount } = useCart();
 
     useEffect(() => {
         const handleScroll = () => {
