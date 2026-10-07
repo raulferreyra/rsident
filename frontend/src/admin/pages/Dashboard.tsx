@@ -50,23 +50,6 @@ export default function Dashboard() {
 
     return (
         <main className="admin-dashboard">
-            <header className="admin-dashboard__header">
-                <div>
-                    <span className="admin-dashboard__eyebrow">
-                        RSIDENT
-                    </span>
-
-                    <h1>Dashboard</h1>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={handleLogout}
-                >
-                    Cerrar sesión
-                </button>
-            </header>
-
             {loading && (
                 <p>Conectando con el backend...</p>
             )}
