@@ -37,6 +37,8 @@ import Dashboard from './admin/pages/Dashboard';
 import Catalog from './admin/pages/Catalog';
 import Products from './admin/pages/Products';
 import ProductForm from './admin/pages/ProductForm';
+import Orders from './admin/pages/Orders';
+import OrderDetail from './admin/pages/OrderDetail';
 
 import './App.css';
 
@@ -169,12 +171,17 @@ function AdminRoutes() {
           path="/admin/products/:id/edit"
           element={<ProductForm />}
         />
-
-        <Route
-          path="*"
-          element={<NotFound />}
-        />
       </Route>
+
+      <Route
+        path="/admin/orders"
+        element={<Orders />}
+      />
+
+      <Route
+        path="/admin/orders/:id"
+        element={<OrderDetail />}
+      />
     </Routes>
   );
 }
