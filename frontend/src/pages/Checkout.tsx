@@ -33,6 +33,7 @@ export default function Checkout() {
     const navigate = useNavigate();
     const {
         items,
+        subtotal,
         clearCart,
         refreshCart,
     } = useCart();
