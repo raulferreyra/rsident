@@ -7,6 +7,9 @@ import {
     type ReactNode,
 } from 'react';
 
+import { publicApi } from './api/client';
+import type { Product } from './types';
+
 export interface CartItem {
     key: string;
     productId: string;
@@ -63,6 +66,68 @@ function readCart(): CartItem[] {
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>(readCart);
+
+    const refreshCart = async () => {
+        const currentItems = items;
+
+        if (currentItems.length === 0) {
+            return [];
+        }
+
+        const results = await Promise.all(
+            currentItems.map(async (item) => {
+                try {
+                    const product =
+                        await publicApi.get<Product>(
+                            `/products/${item.productId}`,
+                        );
+
+                    const variant =
+                        product.variants.find(
+                            (value) =>
+                                value.id ===
+                                item.variantId,
+                        );
+
+                    if (
+                        !product.published ||
+                        !variant
+                    ) {
+                        return null;
+                    }
+
+                    return {
+                        ...item,
+                        productName:
+                            product.name,
+                        price:
+                            product.price,
+                        imageUrl:
+                            product.images?.[0]?.url ??
+                            item.imageUrl,
+                        quantity: Math.min(
+                            item.quantity,
+                            variant.stock,
+                        ),
+                    };
+                } catch {
+                    return null;
+                }
+            }),
+        );
+
+        const nextItems = results.filter(
+            (
+                item,
+            ): item is CartItem =>
+                item !== null &&
+                item.quantity > 0,
+        );
+
+        setItems(nextItems);
+
+        return nextItems;
+    };
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
