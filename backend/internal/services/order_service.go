@@ -3,27 +3,17 @@ package services
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
-
-	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/models"
+	"google.golang.org/api/iterator"
 )
 
 type OrderService struct {
 	db     *firestore.Client
 	mailer *Mailer
-}
-
-var dniPattern = regexp.MustCompile(`^\d{8}$`)
-
-var shippingCosts = map[string]float64{
-	"lima_metropolitana": 12,
-	"lima_provincias":    15,
-	"otras_provincias":   12,
 }
 
 func NewOrderService(
@@ -36,120 +26,107 @@ func NewOrderService(
 	}
 }
 
+var shippingCosts = map[string]float64{
+	"lima_metropolitana": 12,
+	"lima_provincias":    15,
+	"otras_provincias":   12,
+}
+
 func (s *OrderService) Create(
 	ctx context.Context,
-	orderID string,
 	request models.CreateOrderRequest,
 	paymentProofURL string,
 ) (*models.Order, error) {
-	if err := validateOrderRequest(request); err != nil {
+	if err := validateCreateOrder(request); err != nil {
 		return nil, err
 	}
 
 	shippingCost, ok := shippingCosts[request.ShippingZone]
+
 	if !ok {
 		return nil, fmt.Errorf("zona de envío inválida")
 	}
 
-	if orderID == "" {
-		return nil, fmt.Errorf("ID de pedido inválido")
-	}
+	orderRef := s.db.Collection("orders").NewDoc()
+	now := time.Now().UTC()
 
-	orderNumber := fmt.Sprintf(
-		"RS-%s-%s",
-		time.Now().Format("20060102"),
-		strings.ToUpper(strings.Split(orderID, "-")[0]),
-	)
+	items := normalizeItems(request.Items)
 
-	orderRef := s.db.Collection("orders").Doc(orderID)
-	now := time.Now()
+	var createdOrder models.Order
 
-	var order models.Order
+	err := s.db.RunTransaction(ctx, func(
+		ctx context.Context,
+		tx *firestore.Transaction,
+	) error {
+		var orderItems []models.OrderItem
 
-	normalizedItems := normalizeItems(request.Items)
+		subtotal := 0.0
 
-	err := s.db.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		productIDs := make([]string, 0)
-		seenProducts := make(map[string]bool)
-		for _, item := range normalizedItems {
-			if !seenProducts[item.ProductID] {
-				seenProducts[item.ProductID] = true
-				productIDs = append(productIDs, item.ProductID)
-			}
-		}
+		for _, requestedItem := range items {
+			productRef := s.db.
+				Collection("products").
+				Doc(requestedItem.ProductID)
 
-		type productState struct {
-			ref     *firestore.DocumentRef
-			product models.Product
-		}
+			productSnap, err := tx.Get(productRef)
 
-		states := make(map[string]productState, len(productIDs))
-
-		for _, productID := range productIDs {
-			ref := s.db.Collection("products").Doc(productID)
-			doc, err := tx.Get(ref)
 			if err != nil {
-				return fmt.Errorf("producto %s no encontrado", productID)
+				return fmt.Errorf(
+					"producto no encontrado: %s",
+					requestedItem.ProductID,
+				)
 			}
 
-			var product models.Product
-			if err := doc.DataTo(&product); err != nil {
-				return fmt.Errorf("error leyendo producto %s: %w", productID, err)
+			var product struct {
+				Name      string                  `firestore:"name"`
+				Price     float64                 `firestore:"price"`
+				Published bool                    `firestore:"published"`
+				Images    []models.ProductImage   `firestore:"images"`
+				Variants  []models.ProductVariant `firestore:"variants"`
+				Colors    []models.ProductColor   `firestore:"colors"`
+			}
+
+			if err := productSnap.DataTo(&product); err != nil {
+				return fmt.Errorf(
+					"error leyendo producto %s: %w",
+					requestedItem.ProductID,
+					err,
+				)
 			}
 
 			if !product.Published {
-				return fmt.Errorf("el producto %s ya no está disponible", product.Name)
+				return fmt.Errorf(
+					"el producto %s no está disponible",
+					product.Name,
+				)
 			}
-
-			states[productID] = productState{
-				ref:     ref,
-				product: product,
-			}
-		}
-
-		items := make([]models.OrderItem, 0, len(request.Items))
-		productsSubtotal := 0.0
-		updatedVariants := make(map[string][]models.ProductVariant)
-
-		for _, requestItem := range normalizedItems {
-			state := states[requestItem.ProductID]
-			quantity := requestItem.Quantity
 
 			variantIndex := -1
-			for index, variant := range state.product.Variants {
-				if variant.ID == requestItem.VariantID {
+
+			for index, variant := range product.Variants {
+				if variant.ID == requestedItem.VariantID {
 					variantIndex = index
 					break
 				}
 			}
 
 			if variantIndex < 0 {
-				return fmt.Errorf("la variante seleccionada de %s ya no existe", state.product.Name)
-			}
-
-			variant := state.product.Variants[variantIndex]
-			if variant.Stock < quantity {
 				return fmt.Errorf(
-					"stock insuficiente para %s. Disponible: %d, solicitado: %d",
-					state.product.Name,
-					variant.Stock,
-					quantity,
+					"la variante seleccionada ya no existe",
 				)
 			}
 
-			if _, exists := updatedVariants[requestItem.ProductID]; !exists {
-				updatedVariants[requestItem.ProductID] = append(
-					[]models.ProductVariant(nil),
-					state.product.Variants...,
+			variant := product.Variants[variantIndex]
+
+			if variant.Stock < requestedItem.Quantity {
+				return fmt.Errorf(
+					"stock insuficiente para %s",
+					product.Name,
 				)
 			}
-
-			updated := updatedVariants[requestItem.ProductID]
-			updated[variantIndex].Stock -= quantity
-			updatedVariants[requestItem.ProductID] = updated
 
 			colorName := ""
-			for _, color := range state.product.Colors {
+
+			for _, color := range product.Colors {
 				if color.ID == variant.ColorID {
 					colorName = color.Name
 					break
@@ -157,149 +134,692 @@ func (s *OrderService) Create(
 			}
 
 			imageURL := ""
-			if len(state.product.Images) > 0 {
-				imageURL = state.product.Images[0].URL
+
+			if len(product.Images) > 0 {
+				imageURL = product.Images[0].URL
 			}
 
-			subtotal := state.product.Price * float64(quantity)
-			productsSubtotal += subtotal
+			unitPrice := product.Price
+			itemSubtotal := unitPrice *
+				float64(requestedItem.Quantity)
 
-			items = append(items, models.OrderItem{
-				ProductID: requestItem.ProductID,
-				VariantID: requestItem.VariantID,
-				Name:      state.product.Name,
-				SKU:       variant.SKU,
-				Color:     colorName,
-				Size:      variant.Size,
-				ImageURL:  imageURL,
-				Quantity:  quantity,
-				UnitPrice: state.product.Price,
-				Subtotal:  subtotal,
-			})
-		}
+			orderItems = append(
+				orderItems,
+				models.OrderItem{
+					ProductID:   requestedItem.ProductID,
+					VariantID:   requestedItem.VariantID,
+					ProductName: product.Name,
+					ColorName:   colorName,
+					Size:        variant.Size,
+					SKU:         variant.SKU,
+					ImageURL:    imageURL,
+					Quantity:    requestedItem.Quantity,
+					UnitPrice:   unitPrice,
+					Subtotal:    itemSubtotal,
+				},
+			)
 
-		for productID, variants := range updatedVariants {
-			state := states[productID]
-			if err := tx.Set(
-				state.ref,
+			subtotal += itemSubtotal
+
+			product.Variants[variantIndex].Stock -=
+				requestedItem.Quantity
+
+			tx.Set(
+				productRef,
 				map[string]interface{}{
-					"variants":  variants,
+					"variants":  product.Variants,
 					"updatedAt": now,
 				},
 				firestore.MergeAll,
-			); err != nil {
-				return fmt.Errorf("error actualizando stock de %s: %w", state.product.Name, err)
-			}
+			)
 		}
 
-		order = models.Order{
-			ID:               orderID,
-			OrderNumber:      orderNumber,
-			CustomerEmail:    request.Email,
-			Address:          request.Address,
-			ShippingZone:     request.ShippingZone,
-			ShippingCarrier:  "Shalom",
-			ShippingCost:     shippingCost,
-			PickupName:       request.PickupName,
-			PickupDNI:        request.PickupDNI,
-			Items:            items,
-			ProductsSubtotal: productsSubtotal,
-			Total:            productsSubtotal + shippingCost,
-			PaymentProofURL:  paymentProofURL,
-			Status:           "pending_review",
-			PaymentStatus:    "pending_review",
-			CreatedAt:        now,
-			UpdatedAt:        now,
+		createdOrder = models.Order{
+			ID:          orderRef.ID,
+			OrderNumber: generateOrderNumber(now),
+			CustomerEmail: strings.TrimSpace(
+				request.CustomerEmail,
+			),
+			ShippingZone:    request.ShippingZone,
+			ShippingCost:    shippingCost,
+			Address:         strings.TrimSpace(request.Address),
+			PickupName:      strings.TrimSpace(request.PickupName),
+			PickupDNI:       strings.TrimSpace(request.PickupDNI),
+			Courier:         "Shalom",
+			Items:           orderItems,
+			Subtotal:        subtotal,
+			Total:           subtotal + shippingCost,
+			PaymentProofURL: paymentProofURL,
+			PaymentStatus:   PaymentStatusPendingReview,
+			OrderStatus:     OrderStatusPendingReview,
+			ReceiptStatus:   ReceiptStatusPending,
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		}
 
-		return tx.Create(orderRef, order)
+		_, err := tx.Create(
+			orderRef,
+			createdOrder,
+		)
+
+		return err
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	logging.App.Printf(
-		"Order created number=%s total=%.2f items=%d",
-		order.OrderNumber,
-		order.Total,
-		len(order.Items),
-	)
-
-	customerSent, companySent := false, false
 	if s.mailer != nil {
-		customerSent, companySent = s.mailer.SendOrderEmails(order)
+		customerErr := s.mailer.SendCustomerOrder(
+			createdOrder,
+		)
+
+		companyErr := s.mailer.SendCompanyOrder(
+			createdOrder,
+		)
+
+		update := map[string]interface{}{
+			"customerEmailSent": customerErr == nil,
+			"companyEmailSent":  companyErr == nil,
+			"updatedAt":         time.Now().UTC(),
+		}
+
+		_, _ = s.db.
+			Collection("orders").
+			Doc(createdOrder.ID).
+			Set(
+				ctx,
+				update,
+				firestore.MergeAll,
+			)
+
+		createdOrder.CustomerEmailSent =
+			customerErr == nil
+
+		createdOrder.CompanyEmailSent =
+			companyErr == nil
 	}
 
-	updates := map[string]interface{}{
-		"customerEmailSent": customerSent,
-		"companyEmailSent":  companySent,
-		"updatedAt":         time.Now(),
-	}
+	return &createdOrder, nil
+}
 
-	if _, err := orderRef.Set(ctx, updates, firestore.MergeAll); err != nil {
-		logging.Error.Printf(
-			"No se pudo actualizar estado de emails del pedido %s: %v",
-			order.OrderNumber,
-			err,
+func (s *OrderService) List(
+	ctx context.Context,
+) ([]models.Order, error) {
+	iter := s.db.
+		Collection("orders").
+		OrderBy(
+			"createdAt",
+			firestore.Desc,
+		).
+		Documents(ctx)
+
+	defer iter.Stop()
+
+	var orders []models.Order
+
+	for {
+		doc, err := iter.Next()
+
+		if err == iterator.Done {
+			break
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		var order models.Order
+
+		if err := doc.DataTo(&order); err != nil {
+			return nil, err
+		}
+
+		order.ID = doc.Ref.ID
+
+		orders = append(
+			orders,
+			order,
 		)
 	}
 
-	order.CustomerEmailSent = customerSent
-	order.CompanyEmailSent = companySent
-	order.UpdatedAt = time.Now()
+	if orders == nil {
+		orders = []models.Order{}
+	}
+
+	return orders, nil
+}
+
+func (s *OrderService) Get(
+	ctx context.Context,
+	id string,
+) (*models.Order, error) {
+	doc, err := s.db.
+		Collection("orders").
+		Doc(id).
+		Get(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var order models.Order
+
+	if err := doc.DataTo(&order); err != nil {
+		return nil, err
+	}
+
+	order.ID = doc.Ref.ID
 
 	return &order, nil
 }
 
-func normalizeItems(items []models.CreateOrderItem) []models.CreateOrderItem {
-	result := make([]models.CreateOrderItem, 0, len(items))
-	indexes := make(map[string]int)
+func (s *OrderService) FindCustomerOrder(
+	ctx context.Context,
+	orderNumber string,
+	email string,
+) (*models.Order, error) {
+	orderNumber = strings.TrimSpace(orderNumber)
+	email = strings.ToLower(
+		strings.TrimSpace(email),
+	)
+
+	if orderNumber == "" || email == "" {
+		return nil, fmt.Errorf(
+			"número de pedido y correo son obligatorios",
+		)
+	}
+
+	iter := s.db.
+		Collection("orders").
+		Where(
+			"orderNumber",
+			"==",
+			orderNumber,
+		).
+		Limit(1).
+		Documents(ctx)
+
+	defer iter.Stop()
+
+	doc, err := iter.Next()
+
+	if err != nil {
+		if err == iterator.Done {
+			return nil, fmt.Errorf(
+				"pedido no encontrado",
+			)
+		}
+
+		return nil, err
+	}
+
+	var order models.Order
+
+	if err := doc.DataTo(&order); err != nil {
+		return nil, err
+	}
+
+	if strings.ToLower(
+		strings.TrimSpace(order.CustomerEmail),
+	) != email {
+		return nil, fmt.Errorf(
+			"pedido no encontrado",
+		)
+	}
+
+	order.ID = doc.Ref.ID
+
+	order.PaymentProofURL = ""
+
+	return &order, nil
+}
+
+func (s *OrderService) ApprovePayment(
+	ctx context.Context,
+	id string,
+) (*models.Order, error) {
+	return s.updatePayment(
+		ctx,
+		id,
+		PaymentStatusApproved,
+	)
+}
+
+func (s *OrderService) RejectPayment(
+	ctx context.Context,
+	id string,
+) (*models.Order, error) {
+	return s.updatePayment(
+		ctx,
+		id,
+		PaymentStatusRejected,
+	)
+}
+
+func (s *OrderService) updatePayment(
+	ctx context.Context,
+	id string,
+	status string,
+) (*models.Order, error) {
+	orderRef := s.db.
+		Collection("orders").
+		Doc(id)
+
+	var result models.Order
+
+	err := s.db.RunTransaction(
+		ctx,
+		func(
+			ctx context.Context,
+			tx *firestore.Transaction,
+		) error {
+			doc, err := tx.Get(orderRef)
+
+			if err != nil {
+				return err
+			}
+
+			if err := doc.DataTo(&result); err != nil {
+				return err
+			}
+
+			result.ID = id
+
+			currentPayment :=
+				normalizePaymentStatus(
+					result.PaymentStatus,
+				)
+
+			if currentPayment == status {
+				return nil
+			}
+
+			if currentPayment != PaymentStatusPendingReview {
+				return fmt.Errorf(
+					"el pago ya fue procesado",
+				)
+			}
+
+			now := time.Now().UTC()
+
+			if status == PaymentStatusApproved {
+				result.PaymentStatus =
+					PaymentStatusApproved
+
+				result.OrderStatus =
+					OrderStatusConfirmed
+
+				result.UpdatedAt = now
+
+				tx.Set(
+					orderRef,
+					map[string]interface{}{
+						"paymentStatus": PaymentStatusApproved,
+						"orderStatus":   OrderStatusConfirmed,
+						"updatedAt":     now,
+					},
+					firestore.MergeAll,
+				)
+
+				return nil
+			}
+
+			if status == PaymentStatusRejected {
+				if err := restoreStock(
+					ctx,
+					tx,
+					s.db,
+					result.Items,
+				); err != nil {
+					return err
+				}
+
+				result.PaymentStatus =
+					PaymentStatusRejected
+
+				result.OrderStatus =
+					OrderStatusRejected
+
+				result.UpdatedAt = now
+
+				tx.Set(
+					orderRef,
+					map[string]interface{}{
+						"paymentStatus": PaymentStatusRejected,
+						"orderStatus":   OrderStatusRejected,
+						"updatedAt":     now,
+					},
+					firestore.MergeAll,
+				)
+
+				return nil
+			}
+
+			return fmt.Errorf(
+				"estado de pago inválido",
+			)
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (s *OrderService) UpdateOrderStatus(
+	ctx context.Context,
+	id string,
+	status string,
+) (*models.Order, error) {
+	if !isValidOrderStatus(status) {
+		return nil, fmt.Errorf(
+			"estado de pedido inválido",
+		)
+	}
+
+	orderRef := s.db.
+		Collection("orders").
+		Doc(id)
+
+	var result models.Order
+
+	err := s.db.RunTransaction(
+		ctx,
+		func(
+			ctx context.Context,
+			tx *firestore.Transaction,
+		) error {
+			doc, err := tx.Get(orderRef)
+
+			if err != nil {
+				return err
+			}
+
+			if err := doc.DataTo(&result); err != nil {
+				return err
+			}
+
+			result.ID = id
+
+			currentStatus :=
+				normalizeOrderStatus(
+					result.OrderStatus,
+				)
+
+			if currentStatus == status {
+				return nil
+			}
+
+			if status == OrderStatusCancelled {
+				if currentStatus == OrderStatusCancelled ||
+					currentStatus == OrderStatusRejected {
+					return nil
+				}
+
+				if err := restoreStock(
+					ctx,
+					tx,
+					s.db,
+					result.Items,
+				); err != nil {
+					return err
+				}
+			}
+
+			now := time.Now().UTC()
+
+			result.OrderStatus = status
+			result.UpdatedAt = now
+
+			tx.Set(
+				orderRef,
+				map[string]interface{}{
+					"orderStatus": status,
+					"updatedAt":   now,
+				},
+				firestore.MergeAll,
+			)
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (s *OrderService) UpdateReceiptStatus(
+	ctx context.Context,
+	id string,
+	status string,
+) (*models.Order, error) {
+	if status != ReceiptStatusPending &&
+		status != ReceiptStatusSent {
+		return nil, fmt.Errorf(
+			"estado de boleta inválido",
+		)
+	}
+
+	ref := s.db.
+		Collection("orders").
+		Doc(id)
+
+	now := time.Now().UTC()
+
+	_, err := ref.Set(
+		ctx,
+		map[string]interface{}{
+			"receiptStatus": status,
+			"updatedAt":     now,
+		},
+		firestore.MergeAll,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s.Get(ctx, id)
+}
+
+func restoreStock(
+	ctx context.Context,
+	tx *firestore.Transaction,
+	db *firestore.Client,
+	items []models.OrderItem,
+) error {
+	for _, item := range items {
+		productRef := db.
+			Collection("products").
+			Doc(item.ProductID)
+
+		doc, err := tx.Get(productRef)
+
+		if err != nil {
+			return err
+		}
+
+		var product struct {
+			Variants []models.ProductVariant `firestore:"variants"`
+		}
+
+		if err := doc.DataTo(&product); err != nil {
+			return err
+		}
+
+		found := false
+
+		for index := range product.Variants {
+			if product.Variants[index].ID ==
+				item.VariantID {
+
+				product.Variants[index].Stock +=
+					item.Quantity
+
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return fmt.Errorf(
+				"no se encontró la variante %s para restaurar stock",
+				item.VariantID,
+			)
+		}
+
+		tx.Set(
+			productRef,
+			map[string]interface{}{
+				"variants":  product.Variants,
+				"updatedAt": time.Now().UTC(),
+			},
+			firestore.MergeAll,
+		)
+	}
+
+	return nil
+}
+
+func normalizeItems(
+	items []models.CreateOrderItem,
+) []models.CreateOrderItem {
+	result := make([]models.CreateOrderItem, 0)
+
+	indexes := make(
+		map[string]int,
+	)
 
 	for _, item := range items {
-		key := item.ProductID + ":" + item.VariantID
-		if index, exists := indexes[key]; exists {
+		key := item.ProductID +
+			":" +
+			item.VariantID
+
+		if index, ok := indexes[key]; ok {
 			result[index].Quantity += item.Quantity
 			continue
 		}
 
 		indexes[key] = len(result)
-		result = append(result, item)
+
+		result = append(
+			result,
+			item,
+		)
 	}
 
 	return result
 }
 
-func validateOrderRequest(request models.CreateOrderRequest) error {
-	if strings.TrimSpace(request.Email) == "" || !strings.Contains(request.Email, "@") {
-		return fmt.Errorf("el correo electrónico es obligatorio y debe ser válido")
+func validateCreateOrder(
+	request models.CreateOrderRequest,
+) error {
+	if !strings.Contains(
+		request.CustomerEmail,
+		"@",
+	) {
+		return fmt.Errorf(
+			"correo electrónico inválido",
+		)
 	}
 
-	if strings.TrimSpace(request.Address) == "" {
-		return fmt.Errorf("la dirección es obligatoria")
+	if strings.TrimSpace(
+		request.Address,
+	) == "" {
+		return fmt.Errorf(
+			"la dirección es obligatoria",
+		)
 	}
 
-	if strings.TrimSpace(request.PickupName) == "" {
-		return fmt.Errorf("los nombres completos de la persona que recogerá el pedido son obligatorios")
+	if strings.TrimSpace(
+		request.PickupName,
+	) == "" {
+		return fmt.Errorf(
+			"el nombre de quien recibe es obligatorio",
+		)
 	}
 
-	if !dniPattern.MatchString(request.PickupDNI) {
-		return fmt.Errorf("el DNI debe tener 8 dígitos")
+	if strings.TrimSpace(
+		request.PickupDNI,
+	) == "" {
+		return fmt.Errorf(
+			"el DNI es obligatorio",
+		)
 	}
 
 	if len(request.Items) == 0 {
-		return fmt.Errorf("el carrito está vacío")
+		return fmt.Errorf(
+			"el carrito está vacío",
+		)
 	}
 
 	for _, item := range request.Items {
-		if item.ProductID == "" || item.VariantID == "" {
-			return fmt.Errorf("cada producto debe tener una variante válida")
+		if item.ProductID == "" ||
+			item.VariantID == "" {
+			return fmt.Errorf(
+				"cada producto debe tener una variante válida",
+			)
 		}
 
 		if item.Quantity <= 0 {
-			return fmt.Errorf("la cantidad de cada producto debe ser mayor que cero")
+			return fmt.Errorf(
+				"la cantidad debe ser mayor que cero",
+			)
 		}
 	}
 
 	return nil
+}
+
+func generateOrderNumber(
+	t time.Time,
+) string {
+	return fmt.Sprintf(
+		"RS-%s-%04d",
+		t.Format("20060102"),
+		t.UnixNano()%10000,
+	)
+}
+
+func isValidOrderStatus(
+	status string,
+) bool {
+	switch status {
+	case OrderStatusPendingReview,
+		OrderStatusConfirmed,
+		OrderStatusPreparing,
+		OrderStatusShipped,
+		OrderStatusDelivered,
+		OrderStatusCancelled,
+		OrderStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizePaymentStatus(
+	status string,
+) string {
+	if status == "" {
+		return PaymentStatusPendingReview
+	}
+
+	return status
+}
+
+func normalizeOrderStatus(
+	status string,
+) string {
+	if status == "" {
+		return OrderStatusPendingReview
+	}
+
+	return status
 }
