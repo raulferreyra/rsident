@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,10 @@ func main() {
 	defer logging.Close()
 
 	_ = godotenv.Load()
+
+	if mode := os.Getenv("GIN_MODE"); mode != "" {
+		gin.SetMode(mode)
+	}
 
 	ctx := context.Background()
 
@@ -68,15 +73,15 @@ func main() {
 			debug.Stack(),
 		)
 
-		c.AbortWithStatus(500)
+		c.AbortWithStatusJSON(500, gin.H{
+			"error": "Error interno del servidor",
+		})
 	}))
 
 	router.Static("/uploads", "./uploads")
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-		},
+		AllowOrigins: allowedOrigins(),
 		AllowMethods: []string{
 			"GET",
 			"POST",
@@ -88,8 +93,10 @@ func main() {
 		AllowHeaders: []string{
 			"Origin",
 			"Content-Type",
+			"Accept",
 			"Authorization",
 		},
+		MaxAge: 12 * 60 * 60,
 	}))
 
 	catalogService := services.NewCatalogService(
@@ -110,6 +117,7 @@ func main() {
 	)
 
 	mailer := services.NewMailerFromEnv()
+
 	orderService := services.NewOrderService(
 		firebase.Firestore,
 		mailer,
@@ -124,11 +132,44 @@ func main() {
 	)
 
 	log.Printf(
-		"RSIDENT backend ejecutándose en http://localhost:%s",
+		"RSIDENT backend ejecutándose en :%s",
 		port,
 	)
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func allowedOrigins() []string {
+	raw := strings.TrimSpace(
+		os.Getenv("CORS_ALLOWED_ORIGINS"),
+	)
+
+	if raw == "" {
+		return []string{
+			"http://localhost:5173",
+		}
+	}
+
+	values := strings.Split(raw, ",")
+	origins := make([]string, 0, len(values))
+
+	for _, value := range values {
+		origin := strings.TrimSpace(value)
+
+		if origin == "" {
+			continue
+		}
+
+		origins = append(origins, origin)
+	}
+
+	if len(origins) == 0 {
+		return []string{
+			"http://localhost:5173",
+		}
+	}
+
+	return origins
 }
