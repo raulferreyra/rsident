@@ -44,6 +44,7 @@ interface CartContextValue {
     updateQuantity: (key: string, quantity: number) => void;
     removeItem: (key: string) => void;
     clearCart: () => void;
+    refreshCart: () => Promise<CartItem[]>;
 }
 
 const STORAGE_KEY = 'rsident-cart';
@@ -183,7 +184,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const clearCart = () => setItems([]);
 
-    const value = useMemo(
+    const value = useMemo<CartContextValue>(
         () => ({
             items,
             count: items.reduce(
@@ -199,21 +200,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
             updateQuantity,
             removeItem,
             clearCart,
+            refreshCart,
         }),
         [items],
     );
 
     return (
-        <CartContext.Provider
-            value={{
-                items,
-                addItem,
-                updateQuantity,
-                removeItem,
-                clearCart,
-                refreshCart,
-            }}
-        >
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
     );
