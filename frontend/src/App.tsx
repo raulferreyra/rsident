@@ -3,12 +3,16 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from 'react-router-dom';
+
+import { useEffect } from 'react';
 
 import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
 import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
+
 import Shop from './pages/Shop';
 import ShopFilter from './pages/ShopFilter';
 import Collections from './pages/Collections';
@@ -17,7 +21,13 @@ import ProductPage from './pages/Product';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
+import NotFound from './pages/NotFound';
+
 import { CartProvider } from './cart';
+
+import {
+  AUTH_ERROR_EVENT,
+} from './api/client';
 
 // Admin pages
 import AdminNavbar from './admin/components/AdminNavbar';
@@ -45,7 +55,10 @@ function PublicLayout() {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route
+          path="/"
+          element={<Home />}
+        />
 
         <Route
           path="/tienda"
@@ -85,6 +98,11 @@ function PublicLayout() {
         <Route
           path="/compra-confirmada/:orderNumber"
           element={<OrderConfirmation />}
+        />
+
+        <Route
+          path="*"
+          element={<NotFound />}
         />
       </Routes>
 
@@ -151,6 +169,11 @@ function AdminRoutes() {
           path="/admin/products/:id/edit"
           element={<ProductForm />}
         />
+
+        <Route
+          path="*"
+          element={<NotFound />}
+        />
       </Route>
     </Routes>
   );
@@ -167,12 +190,51 @@ function AdminLayout() {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleAuthError = () => {
+      if (
+        location.pathname ===
+        '/admin/login'
+      ) {
+        return;
+      }
+
+      navigate(
+        '/admin/login',
+        {
+          replace: true,
+          state: {
+            message:
+              'Tu sesión expiró. Inicia sesión nuevamente.',
+          },
+        },
+      );
+    };
+
+    window.addEventListener(
+      AUTH_ERROR_EVENT,
+      handleAuthError,
+    );
+
+    return () => {
+      window.removeEventListener(
+        AUTH_ERROR_EVENT,
+        handleAuthError,
+      );
+    };
+  }, [
+    location.pathname,
+    navigate,
+  ]);
 
   const isAdminRoute =
     location.pathname.startsWith('/admin');
 
   const isAdminLogin =
-    location.pathname === '/admin/login';
+    location.pathname ===
+    '/admin/login';
 
   if (isAdminRoute) {
     if (isAdminLogin) {
