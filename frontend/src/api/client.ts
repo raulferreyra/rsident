@@ -188,6 +188,56 @@ export const api = {
         request<T>(path, {
             method: 'DELETE',
         }),
+
+    getOrders: () =>
+        request<Order[]>('/admin/orders', {
+            method: 'GET',
+        }),
+
+    getOrder: (id: string) =>
+        request<Order>(`/admin/orders/${id}`, {
+            method: 'GET',
+        }),
+
+    approvePayment: (id: string) =>
+        request<Order>(
+            `/admin/orders/${id}/payment/approve`,
+            {
+                method: 'POST',
+            },
+        ),
+
+    rejectPayment: (id: string) =>
+        request<Order>(
+            `/admin/orders/${id}/payment/reject`,
+            {
+                method: 'POST',
+            },
+        ),
+
+    updateOrderStatus: (
+        id: string,
+        status: string,
+    ) =>
+        request<Order>(
+            `/admin/orders/${id}/status`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ status }),
+            },
+        ),
+
+    updateReceiptStatus: (
+        id: string,
+        status: string,
+    ) =>
+        request<Order>(
+            `/admin/orders/${id}/receipt-status`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ status }),
+            },
+        ),
 };
 
 export const publicApi = {
@@ -249,4 +299,18 @@ export async function publicUpload<T>(
     }
 
     return response.json();
+}
+
+export async function lookupOrder(
+    orderNumber: string,
+    email: string,
+) {
+    return publicRequest<Order>(
+        `/orders/lookup?orderNumber=${encodeURIComponent(
+            orderNumber,
+        )}&email=${encodeURIComponent(email)}`,
+        {
+            method: 'GET',
+        },
+    );
 }
