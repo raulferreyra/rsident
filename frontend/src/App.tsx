@@ -21,6 +21,7 @@ import ProductPage from './pages/Product';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
+import OrderLookup from './pages/OrderLookup';
 import NotFound from './pages/NotFound';
 
 import { CartProvider } from './cart';
@@ -100,6 +101,11 @@ function PublicLayout() {
         <Route
           path="/compra-confirmada/:orderNumber"
           element={<OrderConfirmation />}
+        />
+
+        <Route
+          path="/pedido"
+          element={<OrderLookup />}
         />
 
         <Route
