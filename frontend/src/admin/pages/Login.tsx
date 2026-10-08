@@ -1,20 +1,88 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+
+import {
+    signInWithEmailAndPassword,
+    signOut,
+} from 'firebase/auth';
+
+import {
+    useLocation,
+    useNavigate,
+} from 'react-router-dom';
 
 import { auth } from '../../config/firebase';
+import {
+    api,
+    ApiError,
+} from '../../api/client';
+
 import './Login.css';
 
 export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    useEffect(() => {
+        const message = (
+            location.state as
+            | { message?: string }
+            | null
+        )?.message;
+
+        if (message) {
+            setError(message);
+
+            window.history.replaceState(
+                {},
+                '',
+            );
+        }
+    }, [location.state]);
+
+    useEffect(() => {
+        if (!auth.currentUser) {
+            return;
+        }
+
+        let active = true;
+
+        const validateExistingSession =
+            async () => {
+                try {
+                    await api.get(
+                        '/admin/dashboard',
+                    );
+
+                    if (active) {
+                        navigate(
+                            '/admin/dashboard',
+                            {
+                                replace: true,
+                            },
+                        );
+                    }
+                } catch {
+                    await signOut(auth);
+                }
+            };
+
+        void validateExistingSession();
+
+        return () => {
+            active = false;
+        };
+    }, [navigate]);
+
+    const handleSubmit = async (
+        event: FormEvent<HTMLFormElement>,
+    ) => {
         event.preventDefault();
 
         setError('');
@@ -23,13 +91,42 @@ export default function Login() {
         try {
             await signInWithEmailAndPassword(
                 auth,
-                email,
+                email.trim(),
                 password,
             );
 
-            navigate('/admin/dashboard');
-        } catch {
-            setError('Correo o contraseña incorrectos.');
+            await api.get(
+                '/admin/dashboard',
+            );
+
+            navigate(
+                '/admin/dashboard',
+                {
+                    replace: true,
+                },
+            );
+        } catch (err) {
+            await signOut(auth);
+
+            if (
+                err instanceof ApiError &&
+                err.status === 403
+            ) {
+                setError(
+                    'La cuenta es válida, pero no tiene permisos de administrador.',
+                );
+            } else if (
+                err instanceof ApiError &&
+                err.status === 401
+            ) {
+                setError(
+                    'La sesión no pudo ser validada. Intenta nuevamente.',
+                );
+            } else {
+                setError(
+                    getLoginError(err),
+                );
+            }
         } finally {
             setLoading(false);
         }
@@ -56,7 +153,11 @@ export default function Login() {
                             type="email"
                             value={email}
                             onChange={(event) => {
-                                setEmail(event.target.value);
+                                setEmail(
+                                    event.target.value,
+                                );
+
+                                setError('');
                             }}
                             autoComplete="email"
                             required
@@ -73,7 +174,11 @@ export default function Login() {
                             type="password"
                             value={password}
                             onChange={(event) => {
-                                setPassword(event.target.value);
+                                setPassword(
+                                    event.target.value,
+                                );
+
+                                setError('');
                             }}
                             autoComplete="current-password"
                             required
@@ -81,7 +186,10 @@ export default function Login() {
                     </div>
 
                     {error && (
-                        <p className="admin-login__error">
+                        <p
+                            className="admin-login__error"
+                            role="alert"
+                        >
                             {error}
                         </p>
                     )}
@@ -90,10 +198,52 @@ export default function Login() {
                         type="submit"
                         disabled={loading}
                     >
-                        {loading ? 'Ingresando...' : 'Ingresar'}
+                        {loading
+                            ? 'Verificando...'
+                            : 'Ingresar'}
                     </button>
                 </form>
             </section>
         </main>
     );
+}
+
+function getLoginError(error: unknown) {
+    if (!(error instanceof Error)) {
+        return 'No se pudo iniciar sesión. Intenta nuevamente.';
+    }
+
+    if (
+        error.message.includes(
+            'auth/invalid-credential',
+        )
+    ) {
+        return 'Correo o contraseña incorrectos.';
+    }
+
+    if (
+        error.message.includes(
+            'auth/user-disabled',
+        )
+    ) {
+        return 'Esta cuenta se encuentra deshabilitada.';
+    }
+
+    if (
+        error.message.includes(
+            'auth/too-many-requests',
+        )
+    ) {
+        return 'Demasiados intentos. Espera unos minutos e inténtalo nuevamente.';
+    }
+
+    if (
+        error.message.includes(
+            'auth/network-request-failed',
+        )
+    ) {
+        return 'No se pudo conectar con el servicio de autenticación.';
+    }
+
+    return 'No se pudo iniciar sesión. Intenta nuevamente.';
 }
