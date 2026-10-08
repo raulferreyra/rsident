@@ -126,7 +126,7 @@ func buildCustomerEmail(order models.Order) string {
 	builder.WriteString("Tu compra en RSIDENT ha sido registrada correctamente.\n\n")
 	builder.WriteString("Pedido: " + order.OrderNumber + "\n")
 	builder.WriteString(fmt.Sprintf("Total: S/ %.2f\n", order.Total))
-	builder.WriteString("Envío: " + order.ShippingCarrier + " - " + order.ShippingZone + "\n")
+	builder.WriteString("Envío: Shalom - " + order.ShippingZone + "\n")
 	builder.WriteString("Persona que recogerá: " + order.PickupName + "\n")
 	builder.WriteString("DNI: " + order.PickupDNI + "\n\n")
 	builder.WriteString("Te informaremos por este medio sobre la tienda Shalom donde podrás recoger tu pedido.\n\n")
@@ -143,10 +143,10 @@ func buildCompanyEmail(order models.Order) string {
 	builder.WriteString("Cliente: " + order.CustomerEmail + "\n")
 	builder.WriteString("Dirección: " + order.Address + "\n")
 	builder.WriteString("Zona: " + order.ShippingZone + "\n")
-	builder.WriteString("Courier: " + order.ShippingCarrier + "\n")
+	builder.WriteString("Courier: Shalom\n")
 	builder.WriteString("Persona que recoge: " + order.PickupName + "\n")
 	builder.WriteString("DNI: " + order.PickupDNI + "\n")
-	builder.WriteString(fmt.Sprintf("Subtotal: S/ %.2f\n", order.ProductsSubtotal))
+	builder.WriteString(fmt.Sprintf("Subtotal: S/ %.2f\n", order.Subtotal))
 	builder.WriteString(fmt.Sprintf("Envío: S/ %.2f\n", order.ShippingCost))
 	builder.WriteString(fmt.Sprintf("Total: S/ %.2f\n\n", order.Total))
 	builder.WriteString("Productos:\n")
@@ -154,8 +154,8 @@ func buildCompanyEmail(order models.Order) string {
 	for _, item := range order.Items {
 		builder.WriteString(fmt.Sprintf(
 			"- %s | %s | %s | %d x S/ %.2f = S/ %.2f\n",
-			item.Name,
-			item.Color,
+			item.ProductName,
+			item.ColorName,
 			item.Size,
 			item.Quantity,
 			item.UnitPrice,
