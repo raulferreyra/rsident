@@ -1,18 +1,63 @@
+import { signOut } from 'firebase/auth';
+
 import { auth } from '../config/firebase';
 
-const API_URL = 'http://localhost:8080/api';
+export const AUTH_ERROR_EVENT = 'rsident:auth-error';
+
+const API_URL = (
+    import.meta.env.VITE_API_URL ?? '/api'
+).replace(/\/$/, '');
+
+export class ApiError extends Error {
+    status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
+function notifyAuthError() {
+    window.dispatchEvent(
+        new CustomEvent(AUTH_ERROR_EVENT),
+    );
+}
+
+async function getToken(forceRefresh = false) {
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new ApiError(
+            'Usuario no autenticado',
+            401,
+        );
+    }
+
+    return user.getIdToken(forceRefresh);
+}
+
+async function parseError(
+    response: Response,
+    fallback: string,
+) {
+    const body = await response.json().catch(
+        () => null,
+    );
+
+    return new ApiError(
+        body?.error ?? fallback,
+        response.status,
+    );
+}
 
 async function request<T>(
     path: string,
     options: RequestInit = {},
+    retry = true,
 ): Promise<T> {
-    const user = auth.currentUser;
-
-    if (!user) {
-        throw new Error('Usuario no autenticado');
-    }
-
-    const token = await user.getIdToken();
+    const token = await getToken();
 
     const response = await fetch(
         `${API_URL}${path}`,
@@ -26,12 +71,54 @@ async function request<T>(
         },
     );
 
-    if (!response.ok) {
-        const body = await response.json().catch(() => null);
+    if (response.status === 401 && retry) {
+        const refreshedToken = await getToken(true);
 
-        throw new Error(
-            body?.error ?? 'Error en la solicitud',
+        const retryResponse = await fetch(
+            `${API_URL}${path}`,
+            {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${refreshedToken}`,
+                    ...options.headers,
+                },
+            },
         );
+
+        if (!retryResponse.ok) {
+            const error = await parseError(
+                retryResponse,
+                'Sesión inválida o expirada',
+            );
+
+            if (error.status === 401) {
+                await signOut(auth);
+                notifyAuthError();
+            }
+
+            throw error;
+        }
+
+        if (retryResponse.status === 204) {
+            return undefined as T;
+        }
+
+        return retryResponse.json();
+    }
+
+    if (!response.ok) {
+        const error = await parseError(
+            response,
+            'Error en la solicitud',
+        );
+
+        if (error.status === 401) {
+            await signOut(auth);
+            notifyAuthError();
+        }
+
+        throw error;
     }
 
     if (response.status === 204) {
@@ -45,15 +132,10 @@ export async function uploadFile<T>(
     path: string,
     file: File,
 ): Promise<T> {
-    const user = auth.currentUser;
-
-    if (!user) {
-        throw new Error('Usuario no autenticado');
-    }
-
-    const token = await user.getIdToken();
+    const token = await getToken();
 
     const formData = new FormData();
+
     formData.append('file', file);
 
     const response = await fetch(
@@ -68,15 +150,17 @@ export async function uploadFile<T>(
     );
 
     if (!response.ok) {
-        const body =
-            await response.json().catch(
-                () => null,
-            );
-
-        throw new Error(
-            body?.error ??
+        const error = await parseError(
+            response,
             'Error al subir el archivo',
         );
+
+        if (error.status === 401) {
+            await signOut(auth);
+            notifyAuthError();
+        }
+
+        throw error;
     }
 
     return response.json();
@@ -115,7 +199,7 @@ export const publicApi = {
 
 async function publicRequest<T>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
 ): Promise<T> {
     const response = await fetch(`${API_URL}${path}`, {
         ...options,
@@ -126,10 +210,9 @@ async function publicRequest<T>(
     });
 
     if (!response.ok) {
-        const body = await response.json().catch(() => null);
-
-        throw new Error(
-            body?.error ?? 'Error en la solicitud'
+        throw await parseError(
+            response,
+            'Error en la solicitud',
         );
     }
 
@@ -139,6 +222,7 @@ async function publicRequest<T>(
 
     return response.json();
 }
+
 export async function publicUpload<T>(
     path: string,
     fields: Record<string, string>,
@@ -158,10 +242,9 @@ export async function publicUpload<T>(
     });
 
     if (!response.ok) {
-        const body = await response.json().catch(() => null);
-
-        throw new Error(
-            body?.error ?? 'Error al procesar la solicitud',
+        throw await parseError(
+            response,
+            'Error al procesar la solicitud',
         );
     }
 
