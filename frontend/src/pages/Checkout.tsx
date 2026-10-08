@@ -91,7 +91,7 @@ export default function Checkout() {
                 '/orders',
                 {
                     order: JSON.stringify({
-                        email,
+                        customerEmail: email,
                         address,
                         shippingZone,
                         shippingCarrier: 'Shalom',
