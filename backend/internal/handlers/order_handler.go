@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -22,45 +23,53 @@ func NewOrderHandler(
 	}
 }
 
-func (h *OrderHandler) Create(
-	c *gin.Context,
-) {
+func (h *OrderHandler) Create(c *gin.Context) {
 	var request models.CreateOrderRequest
 
 	orderJSON := c.PostForm("order")
-
 	if orderJSON == "" {
-		c.JSON(
-			http.StatusBadRequest,
-			gin.H{
-				"error": "Información del pedido requerida",
-			},
-		)
-
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Información del pedido requerida",
+		})
 		return
 	}
 
-	if err := c.ShouldBindJSON(
-		gin.Body,
-	); err != nil {
-		c.JSON(
-			http.StatusBadRequest,
-			gin.H{
-				"error": "Formato de pedido inválido",
-			},
-		)
-
+	if err := json.Unmarshal([]byte(orderJSON), &request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Formato de pedido inválido",
+		})
 		return
 	}
 
-	_ = orderJSON
+	file, header, err := c.Request.FormFile("paymentProof")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Debes adjuntar el comprobante de pago",
+		})
+		return
+	}
+	defer file.Close()
 
-	c.JSON(
-		http.StatusNotImplemented,
-		gin.H{
-			"error": "Usar el handler multipart actual",
-		},
-	)
+	if header.Size > 5<<20 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "El comprobante no puede superar los 5 MB",
+		})
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType != "image/jpeg" &&
+		contentType != "image/png" &&
+		contentType != "image/webp" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Formato de comprobante no permitido",
+		})
+		return
+	}
+
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"error": "Falta conectar el guardado del comprobante",
+	})
 }
 
 func (h *OrderHandler) List(
