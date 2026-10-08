@@ -21,6 +21,7 @@ import ProductPage from './pages/Product';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
+import OrderLookup from './pages/OrderLookup';
 import NotFound from './pages/NotFound';
 
 import { CartProvider } from './cart';
@@ -37,6 +38,8 @@ import Dashboard from './admin/pages/Dashboard';
 import Catalog from './admin/pages/Catalog';
 import Products from './admin/pages/Products';
 import ProductForm from './admin/pages/ProductForm';
+import Orders from './admin/pages/Orders';
+import OrderDetail from './admin/pages/OrderDetail';
 
 import './App.css';
 
@@ -98,6 +101,11 @@ function PublicLayout() {
         <Route
           path="/compra-confirmada/:orderNumber"
           element={<OrderConfirmation />}
+        />
+
+        <Route
+          path="/pedido"
+          element={<OrderLookup />}
         />
 
         <Route
@@ -169,12 +177,17 @@ function AdminRoutes() {
           path="/admin/products/:id/edit"
           element={<ProductForm />}
         />
-
-        <Route
-          path="*"
-          element={<NotFound />}
-        />
       </Route>
+
+      <Route
+        path="/admin/orders"
+        element={<Orders />}
+      />
+
+      <Route
+        path="/admin/orders/:id"
+        element={<OrderDetail />}
+      />
     </Routes>
   );
 }

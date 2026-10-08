@@ -25,6 +25,10 @@ const links = [
         label: 'Productos',
         path: '/admin/products',
     },
+    {
+        label: 'Pedidos',
+        path: '/admin/orders',
+    },
 ];
 
 export default function AdminNavbar() {

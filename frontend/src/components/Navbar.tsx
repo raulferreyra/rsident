@@ -110,6 +110,12 @@ export default function Navbar() {
                 )}
             </div>
 
+            <div className="navbar__item">
+                <Link to="/pedido" className="navbar__link">
+                    CONSULTAR PEDIDO
+                </Link>
+            </div>
+
             <Link
                 to="/carrito"
                 className="navbar__cart"

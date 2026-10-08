@@ -2,14 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/raulferreyra/rsident/backend/internal/models"
 	"github.com/raulferreyra/rsident/backend/internal/services"
@@ -19,121 +15,282 @@ type OrderHandler struct {
 	service *services.OrderService
 }
 
-func NewOrderHandler(service *services.OrderService) *OrderHandler {
-	return &OrderHandler{service: service}
+func NewOrderHandler(
+	service *services.OrderService,
+) *OrderHandler {
+	return &OrderHandler{
+		service: service,
+	}
 }
 
 func (h *OrderHandler) Create(c *gin.Context) {
+	var request models.CreateOrderRequest
+
 	orderJSON := c.PostForm("order")
 	if orderJSON == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "No se recibieron los datos de la compra",
+			"error": "Información del pedido requerida",
 		})
 		return
 	}
 
-	var request models.CreateOrderRequest
 	if err := json.Unmarshal([]byte(orderJSON), &request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Los datos de la compra no son válidos",
+			"error": "Formato de pedido inválido",
 		})
 		return
 	}
 
-	file, err := c.FormFile("paymentProof")
+	file, header, err := c.Request.FormFile("paymentProof")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Debes adjuntar el comprobante de pago",
 		})
 		return
 	}
+	defer file.Close()
 
-	if file.Size > 5*1024*1024 {
+	if header.Size > 5<<20 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "El comprobante no puede superar los 5 MB",
 		})
 		return
 	}
 
-	contentType := file.Header.Get("Content-Type")
+	contentType := header.Header.Get("Content-Type")
 	if contentType != "image/jpeg" &&
 		contentType != "image/png" &&
 		contentType != "image/webp" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "El comprobante debe ser JPG, PNG o WEBP",
+			"error": "Formato de comprobante no permitido",
 		})
 		return
 	}
 
-	orderID := uuid.NewString()
-	extension := strings.ToLower(filepath.Ext(file.Filename))
-	if extension == "" {
-		switch contentType {
-		case "image/png":
-			extension = ".png"
-		case "image/webp":
-			extension = ".webp"
-		default:
-			extension = ".jpg"
-		}
-	}
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"error": "Falta conectar el guardado del comprobante",
+	})
+}
 
-	uploadDir := filepath.Join(
-		"uploads",
-		"payments",
-		orderID,
-	)
-
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo preparar el comprobante de pago",
-		})
-		return
-	}
-
-	filename := uuid.NewString() + extension
-	filePath := filepath.Join(uploadDir, filename)
-
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo guardar el comprobante de pago",
-		})
-		return
-	}
-
-	paymentProofURL := fmt.Sprintf(
-		"/uploads/payments/%s/%s",
-		orderID,
-		filename,
-	)
-
-	order, err := h.service.Create(
+func (h *OrderHandler) List(
+	c *gin.Context,
+) {
+	orders, err := h.service.List(
 		c.Request.Context(),
-		orderID,
-		request,
-		paymentProofURL,
 	)
 
 	if err != nil {
-		_ = os.Remove(filePath)
-		_ = os.Remove(uploadDir)
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"error": err.Error(),
+			},
+		)
 
-		status := http.StatusBadRequest
-		if strings.Contains(err.Error(), "Firestore") ||
-			strings.Contains(err.Error(), "actualizando stock") ||
-			strings.Contains(err.Error(), "stock insuficiente") {
-			status = http.StatusConflict
-		}
-
-		c.JSON(status, gin.H{
-			"error": err.Error(),
-		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"orderNumber": order.OrderNumber,
-		"total":       order.Total,
-		"status":      order.Status,
-	})
+	c.JSON(
+		http.StatusOK,
+		orders,
+	)
+}
+
+func (h *OrderHandler) Get(
+	c *gin.Context,
+) {
+	order, err := h.service.Get(
+		c.Request.Context(),
+		c.Param("id"),
+	)
+
+	if err != nil {
+		c.JSON(
+			http.StatusNotFound,
+			gin.H{
+				"error": "Pedido no encontrado",
+			},
+		)
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		order,
+	)
+}
+
+func (h *OrderHandler) CustomerGet(
+	c *gin.Context,
+) {
+	orderNumber := strings.TrimSpace(
+		c.Query("orderNumber"),
+	)
+
+	email := strings.TrimSpace(
+		c.Query("email"),
+	)
+
+	order, err := h.service.FindCustomerOrder(
+		c.Request.Context(),
+		orderNumber,
+		email,
+	)
+
+	if err != nil {
+		c.JSON(
+			http.StatusNotFound,
+			gin.H{
+				"error": "Pedido no encontrado",
+			},
+		)
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		order,
+	)
+}
+
+func (h *OrderHandler) ApprovePayment(
+	c *gin.Context,
+) {
+	order, err := h.service.ApprovePayment(
+		c.Request.Context(),
+		c.Param("id"),
+	)
+
+	if err != nil {
+		c.JSON(
+			http.StatusConflict,
+			gin.H{
+				"error": err.Error(),
+			},
+		)
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		order,
+	)
+}
+
+func (h *OrderHandler) RejectPayment(
+	c *gin.Context,
+) {
+	order, err := h.service.RejectPayment(
+		c.Request.Context(),
+		c.Param("id"),
+	)
+
+	if err != nil {
+		c.JSON(
+			http.StatusConflict,
+			gin.H{
+				"error": err.Error(),
+			},
+		)
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		order,
+	)
+}
+
+type updateOrderStatusRequest struct {
+	Status string `json:"status"`
+}
+
+func (h *OrderHandler) UpdateStatus(
+	c *gin.Context,
+) {
+	var request updateOrderStatusRequest
+
+	if err := c.ShouldBindJSON(
+		&request,
+	); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{
+				"error": "Estado inválido",
+			},
+		)
+
+		return
+	}
+
+	order, err := h.service.UpdateOrderStatus(
+		c.Request.Context(),
+		c.Param("id"),
+		request.Status,
+	)
+
+	if err != nil {
+		c.JSON(
+			http.StatusConflict,
+			gin.H{
+				"error": err.Error(),
+			},
+		)
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		order,
+	)
+}
+
+type updateReceiptStatusRequest struct {
+	Status string `json:"status"`
+}
+
+func (h *OrderHandler) UpdateReceiptStatus(
+	c *gin.Context,
+) {
+	var request updateReceiptStatusRequest
+
+	if err := c.ShouldBindJSON(
+		&request,
+	); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{
+				"error": "Estado de boleta inválido",
+			},
+		)
+
+		return
+	}
+
+	order, err := h.service.UpdateReceiptStatus(
+		c.Request.Context(),
+		c.Param("id"),
+		request.Status,
+	)
+
+	if err != nil {
+		c.JSON(
+			http.StatusConflict,
+			gin.H{
+				"error": err.Error(),
+			},
+		)
+
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		order,
+	)
 }

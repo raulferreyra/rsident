@@ -63,6 +63,10 @@ func Setup(
 	)
 
 	api.POST("/orders", orderHandler.Create)
+	api.GET(
+		"/orders/lookup",
+		orderHandler.CustomerGet,
+	)
 
 	admin := api.Group("/admin")
 	admin.Use(middleware.FirebaseAuth(authClient))
@@ -120,5 +124,29 @@ func Setup(
 	admin.POST(
 		"/products/:id/images",
 		handlers.UploadProductImage,
+	)
+	admin.GET(
+		"/orders",
+		orderHandler.List,
+	)
+	admin.GET(
+		"/orders/:id",
+		orderHandler.Get,
+	)
+	admin.POST(
+		"/orders/:id/payment/approve",
+		orderHandler.ApprovePayment,
+	)
+	admin.POST(
+		"/orders/:id/payment/reject",
+		orderHandler.RejectPayment,
+	)
+	admin.PATCH(
+		"/orders/:id/status",
+		orderHandler.UpdateStatus,
+	)
+	admin.PATCH(
+		"/orders/:id/receipt-status",
+		orderHandler.UpdateReceiptStatus,
 	)
 }

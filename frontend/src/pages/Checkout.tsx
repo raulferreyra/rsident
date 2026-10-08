@@ -31,7 +31,12 @@ interface OrderResponse {
 
 export default function Checkout() {
     const navigate = useNavigate();
-    const { items, subtotal, clearCart } = useCart();
+    const {
+        items,
+        subtotal,
+        clearCart,
+        refreshCart,
+    } = useCart();
 
     const [shippingZone, setShippingZone] = useState(
         'lima_metropolitana',
@@ -86,7 +91,7 @@ export default function Checkout() {
                 '/orders',
                 {
                     order: JSON.stringify({
-                        email,
+                        customerEmail: email,
                         address,
                         shippingZone,
                         shippingCarrier: 'Shalom',
