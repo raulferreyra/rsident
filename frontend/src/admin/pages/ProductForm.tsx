@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { api, uploadFile } from '../../api/client';
+import { BACKEND_URL } from '../../utils';
 
 import './ProductForm.css';
 
@@ -76,8 +77,6 @@ const sizes = [
     'XL',
     'XXL',
 ];
-
-const BACKEND_URL = 'http://localhost:8080';
 
 const emptyProduct: Product = {
     name: '',
