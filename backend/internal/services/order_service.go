@@ -197,7 +197,7 @@ func (s *OrderService) Create(
 			UpdatedAt:       now,
 		}
 
-		_, err := tx.Create(
+		err := tx.Create(
 			orderRef,
 			createdOrder,
 		)
@@ -210,17 +210,11 @@ func (s *OrderService) Create(
 	}
 
 	if s.mailer != nil {
-		customerErr := s.mailer.SendCustomerOrder(
-			createdOrder,
-		)
-
-		companyErr := s.mailer.SendCompanyOrder(
-			createdOrder,
-		)
+		customerSent, companySent := s.mailer.SendOrderEmails(createdOrder)
 
 		update := map[string]interface{}{
-			"customerEmailSent": customerErr == nil,
-			"companyEmailSent":  companyErr == nil,
+			"customerEmailSent": customerSent,
+			"companyEmailSent":  companySent,
 			"updatedAt":         time.Now().UTC(),
 		}
 
@@ -233,11 +227,8 @@ func (s *OrderService) Create(
 				firestore.MergeAll,
 			)
 
-		createdOrder.CustomerEmailSent =
-			customerErr == nil
-
-		createdOrder.CompanyEmailSent =
-			companyErr == nil
+		createdOrder.CustomerEmailSent = customerSent
+		createdOrder.CompanyEmailSent = companySent
 	}
 
 	return &createdOrder, nil
