@@ -63,18 +63,52 @@ export default function ProductPage() {
         load();
     }, [id]);
 
-    const availableSizes = useMemo(() => {
-        if (!product || !selectedColor) {
-            return [];
-        }
+    useEffect(() => {
+        if (!product) return;
+        const title = `${product.name} | RSIDENT`;
+        const description = (product.description || `Compra ${product.name} en RSIDENT.`).replace(/\s+/g, ' ').slice(0, 160);
+        const image = product.images?.[0]?.url
+            ? new URL(getImageURL(product.images[0].url), window.location.origin).href
+            : `${window.location.origin}/banner.jpg`;
+        document.title = title;
 
-        return product.variants
-            .filter(
-                (variant) =>
-                    variant.colorId === selectedColor &&
-                    variant.stock > 0,
-            )
-            .map((variant) => variant.size);
+        const setMeta = (key: string, value: string, property = false) => {
+            const selector = property ? `meta[property="${key}"]` : `meta[name="${key}"]`;
+            let element = document.head.querySelector<HTMLMetaElement>(selector);
+            if (!element) {
+                element = document.createElement('meta');
+                if (property) element.setAttribute('property', key);
+                else element.setAttribute('name', key);
+                document.head.appendChild(element);
+            }
+            element.content = value;
+        };
+        setMeta('description', description);
+        setMeta('og:type', 'product', true);
+        setMeta('og:title', title, true);
+        setMeta('og:description', description, true);
+        setMeta('og:image', image, true);
+        setMeta('og:url', window.location.href, true);
+        setMeta('twitter:card', 'summary_large_image');
+        setMeta('twitter:title', title);
+        setMeta('twitter:description', description);
+        setMeta('twitter:image', image);
+
+        let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+        if (!canonical) {
+            canonical = document.createElement('link');
+            canonical.rel = 'canonical';
+            document.head.appendChild(canonical);
+        }
+        canonical.href = window.location.href;
+    }, [product]);
+
+    const availableSizes = useMemo(() => {
+        if (!product || !selectedColor) return [];
+        return Array.from(new Set(product.variants
+            .filter((variant) => variant.colorId === selectedColor && variant.stock > 0)
+            .map((variant) => variant.size)
+            .filter(Boolean)));
     }, [product, selectedColor]);
 
     const selectedVariant = product?.variants.find(
@@ -184,7 +218,7 @@ export default function ProductPage() {
                         </p>
                     )}
 
-                    {product.colors.length > 0 && (
+                    {product.variants.length > 0 && product.colors.length > 0 && (
                         <section className="product-page__option">
                             <h2>Color</h2>
                             <div className="product-page__colors">
@@ -221,8 +255,8 @@ export default function ProductPage() {
                         <section className="product-page__option">
                             <h2>Talla</h2>
                             <div className="product-page__sizes">
-                                {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => {
-                                    const available = availableSizes.includes(size);
+                                {availableSizes.map((size) => {
+                                    const available = true;
                                     return (
                                         <button
                                             key={size}
@@ -243,9 +277,14 @@ export default function ProductPage() {
                         </section>
                     )}
 
-                    {selectedVariant && (
+                    {product.variants.length > 0 && selectedVariant && (
                         <p className="product-page__stock">
                             {selectedVariant.stock} unidad(es) disponibles
+                        </p>
+                    )}
+                    {product.variants.length === 0 && (
+                        <p className="product-page__stock">
+                            {product.stock} unidad(es) disponibles
                         </p>
                     )}
 
@@ -259,10 +298,9 @@ export default function ProductPage() {
                     <button
                         type="button"
                         className="product-page__action"
-                        disabled={
-                            product.variants.length > 0 &&
-                            (!selectedColor || !selectedSize || !selectedVariant)
-                        }
+                        disabled={product.variants.length > 0
+                            ? (!selectedColor || !selectedSize || !selectedVariant)
+                            : product.stock <= 0}
                         onClick={() => {
                             const selectedColorData = product.colors.find(
                                 (color) => color.id === selectedColor,

@@ -88,11 +88,21 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if product.Price < 0 {
+	if product.Price < 0 || product.Stock < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "El precio no puede ser negativo",
+			"error": "El precio y el stock no pueden ser negativos",
 		})
 		return
+	}
+
+	for _, variant := range product.Variants {
+		if variant.Stock < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "El stock de las variantes no puede ser negativo"})
+			return
+		}
+	}
+	if len(product.Variants) > 0 {
+		product.Stock = 0
 	}
 
 	result, err := h.service.Create(
@@ -127,6 +137,20 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			"error": "Nombre y slug son obligatorios",
 		})
 		return
+	}
+
+	if product.Price < 0 || product.Stock < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "El precio y el stock no pueden ser negativos"})
+		return
+	}
+	for _, variant := range product.Variants {
+		if variant.Stock < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "El stock de las variantes no puede ser negativo"})
+			return
+		}
+	}
+	if len(product.Variants) > 0 {
+		product.Stock = 0
 	}
 
 	err := h.service.Update(
