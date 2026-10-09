@@ -32,6 +32,7 @@ export interface Product {
     slug: string;
     description: string;
     price: number;
+    stock: number;
     oldPrice: number;
     categoryId: string;
     collectionId: string;

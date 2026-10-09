@@ -78,6 +78,10 @@ export default function Checkout() {
             setError('Debes adjuntar la imagen del comprobante de pago.');
             return;
         }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(paymentProof.type) || paymentProof.size > 5 * 1024 * 1024) {
+            setError('El comprobante debe ser JPG, PNG o WEBP y no superar 5 MB.');
+            return;
+        }
 
         if (!/^\d{8}$/.test(pickupDNI)) {
             setError('El DNI debe tener 8 dígitos.');
@@ -96,7 +100,7 @@ export default function Checkout() {
                         shippingZone,
                         shippingCarrier: 'Shalom',
                         pickupName,
-                        pickupDNI,
+                        pickupDni: pickupDNI,
                         items: items.map((item) => ({
                             productId: item.productId,
                             variantId: item.variantId,

@@ -29,6 +29,7 @@ type Product struct {
 	Slug         string           `json:"slug" firestore:"slug"`
 	Description  string           `json:"description" firestore:"description"`
 	Price        float64          `json:"price" firestore:"price"`
+	Stock        int              `json:"stock" firestore:"stock"`
 	OldPrice     float64          `json:"oldPrice" firestore:"oldPrice"`
 	CategoryID   string           `json:"categoryId" firestore:"categoryId"`
 	CollectionID string           `json:"collectionId" firestore:"collectionId"`

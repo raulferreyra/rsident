@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -12,67 +11,32 @@ import (
 
 func UploadProductImage(c *gin.Context) {
 	productID := c.Param("id")
-
-	if productID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "ID de producto requerido",
-		})
+	if productID == "" || filepath.Base(productID) != productID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de producto inválido"})
 		return
 	}
-
-	file, err := c.FormFile("file")
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxImageSize+(1<<20))
+	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "No se recibió ningún archivo",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No se recibió ningún archivo válido"})
 		return
 	}
-
-	if !strings.HasPrefix(file.Header.Get("Content-Type"), "image/") {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "El archivo debe ser una imagen",
-		})
+	defer file.Close()
+	ext, err := validateImage(file, header.Size)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	if file.Size > 5*1024*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "La imagen no puede superar los 5 MB",
-		})
+	filename := uuid.NewString() + ext
+	uploadDir := filepath.Join("uploads", "products", productID)
+	if err := os.MkdirAll(uploadDir, 0750); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo crear la carpeta de imágenes"})
 		return
 	}
-
-	extension := strings.ToLower(filepath.Ext(file.Filename))
-
-	if extension == "" {
-		extension = ".jpg"
-	}
-
-	filename := uuid.NewString() + extension
-
-	uploadDir := filepath.Join(
-		"uploads",
-		"products",
-		productID,
-	)
-
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo crear la carpeta de imágenes",
-		})
-		return
-	}
-
 	filePath := filepath.Join(uploadDir, filename)
-
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "No se pudo guardar la imagen",
-		})
+	if err := c.SaveUploadedFile(header, filePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar la imagen"})
 		return
 	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"url": "/uploads/products/" + productID + "/" + filename,
-	})
+	c.JSON(http.StatusCreated, gin.H{"url": "/uploads/products/" + productID + "/" + filename})
 }
