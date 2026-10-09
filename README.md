@@ -4,8 +4,6 @@ E-commerce de ropa desarrollado con React, TypeScript y Go.
 
 RSIDENT incluye una tienda web, un API para catálogo y pedidos, gestión administrativa de productos e inventario, carga local de imágenes y un flujo de compra con comprobante de pago.
 
-> **Estado del proyecto:** consulta la sección [Pruebas y estado de validación](#pruebas-y-estado-de-validación) antes de desplegar. La existencia de una implementación no implica que haya sido validada en un entorno de producción.
-
 ## Contenido
 
 - [Tecnologías](#tecnologías)
@@ -52,7 +50,7 @@ RSIDENT incluye una tienda web, un API para catálogo y pedidos, gestión admini
 - Docker y configuración de entorno, según los archivos disponibles en el repositorio.
 - Scripts y documentación en `database/`, `infrastructure/` y `docs/`.
 
-Las versiones exactas de las dependencias se definen en los archivos de configuración del proyecto. Revisa `backend/go.mod` y los archivos de paquetes del frontend para conocer las versiones requeridas por la copia que estás utilizando.
+Las versiones exactas de las dependencias se definen en los archivos de configuración del proyecto. Revisar `backend/go.mod` y los archivos de paquetes del frontend para conocer las versiones requeridas por la copia que se está utilizando.
 
 ## Estructura del repositorio
 
@@ -74,7 +72,7 @@ rsident/
 └── docs/             # Documentación funcional y técnica
 ```
 
-La estructura puede variar entre ramas o versiones. No elimines directorios que contengan datos locales o archivos necesarios para la ejecución.
+La estructura puede variar entre ramas o versiones. No eliminar directorios que contengan datos locales o archivos necesarios para la ejecución.
 
 ## Arquitectura general
 
@@ -89,7 +87,7 @@ El navegador no debe considerarse una autoridad para precios, stock, permisos ni
 
 ## Requisitos previos
 
-Instala las herramientas que correspondan a la versión del proyecto:
+Instalar las herramientas que correspondan a la versión del proyecto:
 
 - Git.
 - Go, en la versión requerida por `backend/go.mod`.
@@ -124,7 +122,7 @@ El backend utiliza configuración por variables de entorno. Los nombres que apar
 | `SMTP_FROM` | Remitente de los mensajes. |
 | `ORDER_NOTIFICATION_EMAIL` | Dirección que recibe las notificaciones de nuevos pedidos. |
 
-La configuración exacta puede depender de la versión del backend. Comprueba el código de inicialización y `NewMailerFromEnv()` antes de eliminar o renombrar variables.
+La configuración exacta puede depender de la versión del backend. Comprobar el código de inicialización y `NewMailerFromEnv()` antes de eliminar o renombrar variables.
 
 ### Credenciales de Firebase
 
@@ -134,7 +132,7 @@ La configuración exacta puede depender de la versión del backend. Comprueba el
 4. Configura `GOOGLE_APPLICATION_CREDENTIALS` con la ruta local al archivo de credenciales cuando ese mecanismo esté habilitado.
 5. Comprueba que la identidad de servicio tenga únicamente los permisos necesarios.
 
-**No incluyas archivos de credenciales en Git, en imágenes Docker públicas ni en ZIP distribuidos.** Si una credencial real ya fue expuesta, revócala o rótala. No pegues secretos en incidencias, documentación ni registros.
+**No incluir archivos de credenciales en Git, en imágenes Docker públicas ni en ZIP distribuidos.** Si una credencial real ya fue expuesta, revócala o rótala. No pegues secretos en incidencias, documentación ni registros.
 
 ### Ejemplo de entorno local
 
@@ -191,7 +189,7 @@ go run .
 
 Estos comandos son orientativos y presuponen que el módulo tiene su punto de entrada en el directorio raíz. Si el ejecutable está en otro paquete, utiliza la ruta indicada por la estructura real del backend.
 
-El backend requiere configuración válida de Firebase para las operaciones que acceden a Firestore. Configura primero las variables de entorno y las credenciales.
+El backend requiere configuración válida de Firebase para las operaciones que acceden a Firestore. Configurar primero las variables de entorno y las credenciales.
 
 ### Frontend en desarrollo
 
@@ -203,7 +201,7 @@ npm ci
 npm run dev
 ```
 
-Abre la URL local que indique Vite en la consola. Asegúrate de que la URL de la API configurada en el frontend corresponda al puerto en el que escucha el backend.
+Abrir la URL local que indique Vite en la consola. Asegúrate de que la URL de la API configurada en el frontend corresponda al puerto en el que escucha el backend.
 
 ## Funcionalidades principales
 
@@ -287,7 +285,7 @@ La configuración SMTP permite enviar una confirmación al cliente y una notific
 - Que los estados `customerEmailSent` y `companyEmailSent` reflejen el resultado real del envío.
 - Que el fallo de correo no convierta un pedido ya persistido en una operación aparentemente fallida que el cliente repita sin necesidad.
 
-Nunca registres contraseñas SMTP ni credenciales en los logs.
+Nunca registrar contraseñas SMTP ni credenciales en los logs.
 
 ## SEO
 
@@ -323,7 +321,7 @@ Guarda el resultado fuera del directorio de la aplicación y verifica que pueda 
 
 ## Pruebas y estado de validación
 
-No consideres la aplicación lista para producción únicamente porque compile. Ejecuta las pruebas en un entorno que disponga de las versiones de Go y Node requeridas, acceso a las dependencias y configuración de Firebase adecuada.
+No considerar la aplicación lista para producción únicamente porque compile. Ejecuta las pruebas en un entorno que disponga de las versiones de Go y Node requeridas, acceso a las dependencias y configuración de Firebase adecuada.
 
 ### Backend en Test
 
@@ -343,7 +341,7 @@ npm ci
 npm run build
 ```
 
-Ejecuta también las pruebas frontend que estén definidas en `frontend/package.json`.
+Ejecutar también las pruebas frontend que estén definidas en `frontend/package.json`.
 
 ### Escenarios de integración
 
@@ -359,7 +357,7 @@ Ejecuta también las pruebas frontend que estén definidas en `frontend/package.
 - SEO de productos y navegación directa a una ficha.
 - Backup y restauración de `uploads/`.
 
-Registra el resultado, el entorno, las versiones y cualquier limitación. No marques una prueba como aprobada si no se ejecutó.
+Registrar el resultado, el entorno, las versiones y cualquier limitación. No marques una prueba como aprobada si no se ejecutó.
 
 ## Seguridad y despliegue
 
@@ -380,44 +378,44 @@ Antes de desplegar:
 
 ### Credenciales de Firebase y conexión
 
-No distribuyas un archivo `firebase-service-account.json` con el proyecto. Utiliza un mecanismo seguro de secretos o credenciales del entorno de ejecución. Si una clave ya se publicó o compartió fuera de los destinatarios autorizados, rótala y revisa su uso.
+No distribuir un archivo `firebase-service-account.json` con el proyecto. Utiliza un mecanismo seguro de secretos o credenciales del entorno de ejecución. Si una clave ya se publicó o compartió fuera de los destinatarios autorizados, rótala y revisa su uso.
 
 ## Solución de problemas
 
 ### El backend no puede conectarse a Firestore
 
-- Confirma `FIREBASE_PROJECT_ID`.
-- Confirma que la identidad de servicio esté disponible y tenga permisos suficientes.
+- Confirmar `FIREBASE_PROJECT_ID`.
+- Confirmar que la identidad de servicio esté disponible y tenga permisos suficientes.
 - Comprueba que `GOOGLE_APPLICATION_CREDENTIALS`, cuando se use, apunte a un archivo existente y válido.
 - Verifica conectividad y configuración del proyecto Firebase.
 
 ### La subida de archivos falla
 
-- Confirma que `backend/uploads/` exista y tenga permisos de escritura.
-- Comprueba el límite de tamaño y los tipos permitidos por el backend.
-- Verifica que el volumen persista entre reinicios o despliegues.
-- Revisa los logs sin compartir información sensible.
+- Confirmar que `backend/uploads/` exista y tenga permisos de escritura.
+- Comprobar el límite de tamaño y los tipos permitidos por el backend.
+- Verificar que el volumen persista entre reinicios o despliegues.
+- Revisar los logs sin compartir información sensible.
 
 ### Los correos no llegan
 
-- Verifica las variables SMTP.
-- Comprueba el puerto, TLS y las credenciales con el proveedor SMTP.
-- Revisa las carpetas de spam y los registros del proveedor.
-- Comprueba los indicadores de envío guardados en el pedido.
+- Verificar las variables SMTP.
+- Comprobar el puerto, TLS y las credenciales con el proveedor SMTP.
+- Revisar las carpetas de spam y los registros del proveedor.
+- Comprobar los indicadores de envío guardados en el pedido.
 
 ### El frontend no llega al backend
 
-- Comprueba la URL de API configurada en `src/api/client.ts`.
-- Verifica el puerto del backend.
-- Revisa CORS y la consola de red del navegador.
-- Confirma que frontend y backend estén ejecutándose en los entornos esperados.
+- Comprobar la URL de API configurada en `src/api/client.ts`.
+- Verificar el puerto del backend.
+- Revisar CORS y la consola de red del navegador.
+- Confirmar que frontend y backend estén ejecutándose en los entornos esperados.
 
 ### El inventario no coincide
 
-- Revisa el historial de pedidos y sus estados.
-- Verifica si se ha ejecutado más de una vez una operación de cancelación o rechazo.
-- Comprueba si hay pedidos antiguos creados antes del modelo de stock de productos simples.
-- No corrijas cantidades manualmente sin registrar la causa y comprobar los pedidos relacionados.
+- Revisar el historial de pedidos y sus estados.
+- Verificar si se ha ejecutado más de una vez una operación de cancelación o rechazo.
+- Comprobar si hay pedidos antiguos creados antes del modelo de stock de productos simples.
+- No correjir cantidades manualmente sin registrar la causa y comprobar los pedidos relacionados.
 
 ## Mantenimiento
 
