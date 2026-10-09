@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/raulferreyra/rsident/backend/internal/logging"
 	"github.com/raulferreyra/rsident/backend/internal/models"
 	"google.golang.org/api/iterator"
 )
@@ -42,144 +43,129 @@ func (s *OrderService) Create(
 	}
 
 	shippingCost, ok := shippingCosts[request.ShippingZone]
-
 	if !ok {
 		return nil, fmt.Errorf("zona de envío inválida")
 	}
 
+	items := normalizeItems(request.Items)
 	orderRef := s.db.Collection("orders").NewDoc()
 	now := time.Now().UTC()
-
-	items := normalizeItems(request.Items)
-
 	var createdOrder models.Order
 
-	err := s.db.RunTransaction(ctx, func(
-		ctx context.Context,
-		tx *firestore.Transaction,
-	) error {
-		var orderItems []models.OrderItem
-
-		subtotal := 0.0
-
-		for _, requestedItem := range items {
-			productRef := s.db.
-				Collection("products").
-				Doc(requestedItem.ProductID)
-
-			productSnap, err := tx.Get(productRef)
-
-			if err != nil {
-				return fmt.Errorf(
-					"producto no encontrado: %s",
-					requestedItem.ProductID,
-				)
-			}
-
-			var product struct {
+	err := s.db.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		type productState struct {
+			ref     *firestore.DocumentRef
+			product struct {
 				Name      string                  `firestore:"name"`
 				Price     float64                 `firestore:"price"`
+				Stock     int                     `firestore:"stock"`
 				Published bool                    `firestore:"published"`
 				Images    []models.ProductImage   `firestore:"images"`
 				Variants  []models.ProductVariant `firestore:"variants"`
 				Colors    []models.ProductColor   `firestore:"colors"`
 			}
+		}
 
-			if err := productSnap.DataTo(&product); err != nil {
-				return fmt.Errorf(
-					"error leyendo producto %s: %w",
-					requestedItem.ProductID,
-					err,
-				)
+		states := make(map[string]*productState, len(items))
+		// Todas las lecturas ocurren antes de cualquier escritura de la transacción.
+		for _, requestedItem := range items {
+			if _, exists := states[requestedItem.ProductID]; exists {
+				continue
 			}
-
-			if !product.Published {
-				return fmt.Errorf(
-					"el producto %s no está disponible",
-					product.Name,
-				)
+			ref := s.db.Collection("products").Doc(requestedItem.ProductID)
+			snap, err := tx.Get(ref)
+			if err != nil {
+				return fmt.Errorf("producto no encontrado: %s", requestedItem.ProductID)
 			}
-
-			variantIndex := -1
-
-			for index, variant := range product.Variants {
-				if variant.ID == requestedItem.VariantID {
-					variantIndex = index
-					break
-				}
+			state := &productState{ref: ref}
+			if err := snap.DataTo(&state.product); err != nil {
+				return fmt.Errorf("error leyendo producto %s: %w", requestedItem.ProductID, err)
 			}
-
-			if variantIndex < 0 {
-				return fmt.Errorf(
-					"la variante seleccionada ya no existe",
-				)
+			if !state.product.Published {
+				return fmt.Errorf("el producto %s no está disponible", state.product.Name)
 			}
+			states[requestedItem.ProductID] = state
+		}
 
-			variant := product.Variants[variantIndex]
-
-			if variant.Stock < requestedItem.Quantity {
-				return fmt.Errorf(
-					"stock insuficiente para %s",
-					product.Name,
-				)
-			}
-
-			colorName := ""
-
-			for _, color := range product.Colors {
-				if color.ID == variant.ColorID {
-					colorName = color.Name
-					break
-				}
-			}
-
-			imageURL := ""
-
+		orderItems := make([]models.OrderItem, 0, len(items))
+		subtotal := 0.0
+		for _, requestedItem := range items {
+			state := states[requestedItem.ProductID]
+			product := &state.product
+			colorName, size, sku, variantID, imageURL := "", "", "", "", ""
 			if len(product.Images) > 0 {
 				imageURL = product.Images[0].URL
 			}
 
-			unitPrice := product.Price
-			itemSubtotal := unitPrice *
-				float64(requestedItem.Quantity)
+			if len(product.Variants) == 0 {
+				if requestedItem.VariantID != "" {
+					return fmt.Errorf("el producto %s no utiliza variantes", product.Name)
+				}
+				if product.Stock < requestedItem.Quantity {
+					return fmt.Errorf("stock insuficiente para %s", product.Name)
+				}
+				product.Stock -= requestedItem.Quantity
+			} else {
+				if requestedItem.VariantID == "" {
+					return fmt.Errorf("selecciona una variante para %s", product.Name)
+				}
+				variantIndex := -1
+				for index := range product.Variants {
+					if product.Variants[index].ID == requestedItem.VariantID {
+						variantIndex = index
+						break
+					}
+				}
+				if variantIndex < 0 {
+					return fmt.Errorf("la variante seleccionada ya no existe")
+				}
+				variant := &product.Variants[variantIndex]
+				if variant.Stock < requestedItem.Quantity {
+					return fmt.Errorf("stock insuficiente para %s", product.Name)
+				}
+				variant.Stock -= requestedItem.Quantity
+				variantID, size, sku = variant.ID, variant.Size, variant.SKU
+				for _, color := range product.Colors {
+					if color.ID == variant.ColorID {
+						colorName = color.Name
+						if color.ImageURL != "" {
+							imageURL = color.ImageURL
+						}
+						break
+					}
+				}
+			}
 
-			orderItems = append(
-				orderItems,
-				models.OrderItem{
-					ProductID:   requestedItem.ProductID,
-					VariantID:   requestedItem.VariantID,
-					ProductName: product.Name,
-					ColorName:   colorName,
-					Size:        variant.Size,
-					SKU:         variant.SKU,
-					ImageURL:    imageURL,
-					Quantity:    requestedItem.Quantity,
-					UnitPrice:   unitPrice,
-					Subtotal:    itemSubtotal,
-				},
-			)
+			lineSubtotal := product.Price * float64(requestedItem.Quantity)
+			orderItems = append(orderItems, models.OrderItem{
+				ProductID:   requestedItem.ProductID,
+				VariantID:   variantID,
+				ProductName: product.Name,
+				ColorName:   colorName,
+				Size:        size,
+				SKU:         sku,
+				ImageURL:    imageURL,
+				Quantity:    requestedItem.Quantity,
+				UnitPrice:   product.Price,
+				Subtotal:    lineSubtotal,
+			})
+			subtotal += lineSubtotal
+		}
 
-			subtotal += itemSubtotal
-
-			product.Variants[variantIndex].Stock -=
-				requestedItem.Quantity
-
-			tx.Set(
-				productRef,
-				map[string]interface{}{
-					"variants":  product.Variants,
-					"updatedAt": now,
-				},
-				firestore.MergeAll,
-			)
+		for _, state := range states {
+			updates := map[string]interface{}{"updatedAt": now}
+			if len(state.product.Variants) == 0 {
+				updates["stock"] = state.product.Stock
+			} else {
+				updates["variants"] = state.product.Variants
+			}
+			tx.Set(state.ref, updates, firestore.MergeAll)
 		}
 
 		createdOrder = models.Order{
-			ID:          orderRef.ID,
-			OrderNumber: generateOrderNumber(now),
-			CustomerEmail: strings.TrimSpace(
-				request.CustomerEmail,
-			),
+			ID:              orderRef.ID,
+			OrderNumber:     generateOrderNumber(now),
+			CustomerEmail:   strings.ToLower(strings.TrimSpace(request.CustomerEmail)),
 			ShippingZone:    request.ShippingZone,
 			ShippingCost:    shippingCost,
 			Address:         strings.TrimSpace(request.Address),
@@ -196,41 +182,25 @@ func (s *OrderService) Create(
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		}
-
-		err := tx.Create(
-			orderRef,
-			createdOrder,
-		)
-
-		return err
+		return tx.Create(orderRef, createdOrder)
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	if s.mailer != nil {
 		customerSent, companySent := s.mailer.SendOrderEmails(createdOrder)
-
 		update := map[string]interface{}{
 			"customerEmailSent": customerSent,
 			"companyEmailSent":  companySent,
 			"updatedAt":         time.Now().UTC(),
 		}
-
-		_, _ = s.db.
-			Collection("orders").
-			Doc(createdOrder.ID).
-			Set(
-				ctx,
-				update,
-				firestore.MergeAll,
-			)
-
+		if _, updateErr := s.db.Collection("orders").Doc(createdOrder.ID).Set(ctx, update, firestore.MergeAll); updateErr != nil {
+			logging.Error.Printf("No se pudo actualizar el estado de los correos del pedido %s: %v", createdOrder.OrderNumber, updateErr)
+		}
 		createdOrder.CustomerEmailSent = customerSent
 		createdOrder.CompanyEmailSent = companySent
 	}
-
 	return &createdOrder, nil
 }
 
@@ -625,56 +595,63 @@ func restoreStock(
 	db *firestore.Client,
 	items []models.OrderItem,
 ) error {
+	type stockState struct {
+		ref      *firestore.DocumentRef
+		stock    int
+		variants []models.ProductVariant
+	}
+	states := make(map[string]*stockState)
 	for _, item := range items {
-		productRef := db.
-			Collection("products").
-			Doc(item.ProductID)
-
-		doc, err := tx.Get(productRef)
-
+		if _, exists := states[item.ProductID]; exists {
+			continue
+		}
+		ref := db.Collection("products").Doc(item.ProductID)
+		doc, err := tx.Get(ref)
 		if err != nil {
 			return err
 		}
-
 		var product struct {
+			Stock    int                     `firestore:"stock"`
 			Variants []models.ProductVariant `firestore:"variants"`
 		}
-
 		if err := doc.DataTo(&product); err != nil {
 			return err
 		}
+		states[item.ProductID] = &stockState{ref: ref, stock: product.Stock, variants: product.Variants}
+	}
 
+	for _, item := range items {
+		state := states[item.ProductID]
+		if item.VariantID == "" {
+			if len(state.variants) > 0 {
+				return fmt.Errorf("el producto %s ahora tiene variantes; no se puede restaurar stock simple", item.ProductID)
+			}
+			state.stock += item.Quantity
+			continue
+		}
 		found := false
-
-		for index := range product.Variants {
-			if product.Variants[index].ID ==
-				item.VariantID {
-
-				product.Variants[index].Stock +=
-					item.Quantity
-
+		for i := range state.variants {
+			if state.variants[i].ID == item.VariantID {
+				state.variants[i].Stock += item.Quantity
 				found = true
 				break
 			}
 		}
-
 		if !found {
-			return fmt.Errorf(
-				"no se encontró la variante %s para restaurar stock",
-				item.VariantID,
-			)
+			return fmt.Errorf("no se encontró la variante %s para restaurar stock", item.VariantID)
 		}
-
-		tx.Set(
-			productRef,
-			map[string]interface{}{
-				"variants":  product.Variants,
-				"updatedAt": time.Now().UTC(),
-			},
-			firestore.MergeAll,
-		)
 	}
 
+	now := time.Now().UTC()
+	for _, state := range states {
+		updates := map[string]interface{}{"updatedAt": now}
+		if len(state.variants) == 0 {
+			updates["stock"] = state.stock
+		} else {
+			updates["variants"] = state.variants
+		}
+		tx.Set(state.ref, updates, firestore.MergeAll)
+	}
 	return nil
 }
 
@@ -712,7 +689,7 @@ func validateCreateOrder(
 	request models.CreateOrderRequest,
 ) error {
 	if !strings.Contains(
-		request.CustomerEmail,
+		strings.TrimSpace(request.CustomerEmail),
 		"@",
 	) {
 		return fmt.Errorf(
@@ -751,10 +728,9 @@ func validateCreateOrder(
 	}
 
 	for _, item := range request.Items {
-		if item.ProductID == "" ||
-			item.VariantID == "" {
+		if strings.TrimSpace(item.ProductID) == "" {
 			return fmt.Errorf(
-				"cada producto debe tener una variante válida",
+				"cada producto debe tener un ID válido",
 			)
 		}
 

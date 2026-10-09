@@ -43,6 +43,7 @@ interface Product {
     slug: string;
     description: string;
     price: number;
+    stock: number;
     oldPrice: number;
     categoryId: string;
     collectionId: string;
@@ -69,20 +70,14 @@ interface ColorFileState {
     preview: string;
 }
 
-const sizes = [
-    'XS',
-    'S',
-    'M',
-    'L',
-    'XL',
-    'XXL',
-];
+const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 const emptyProduct: Product = {
     name: '',
     slug: '',
     description: '',
     price: 0,
+    stock: 0,
     oldPrice: 0,
     categoryId: '',
     collectionId: '',
@@ -148,6 +143,8 @@ export default function ProductForm() {
     );
 
     const [saving, setSaving] = useState(false);
+    const [newSize, setNewSize] = useState('');
+    const [customSizes, setCustomSizes] = useState<string[]>([]);
     const [error, setError] = useState('');
 
     const loadCatalog = async () => {
@@ -210,6 +207,7 @@ export default function ProductForm() {
             ...result,
             images: result.images ?? [],
             colors: normalizedColors,
+            stock: result.stock ?? 0,
             variants: normalizedVariants,
             tagIds: result.tagIds ?? [],
         });
@@ -280,9 +278,12 @@ export default function ProductForm() {
         index: number,
         file: File | null,
     ) => {
-        if (!file) {
+        if (!file) return;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+            setError('Las imágenes deben ser JPG, PNG o WEBP y no superar 5 MB.');
             return;
         }
+        setError('');
 
         const preview =
             URL.createObjectURL(file);
@@ -393,9 +394,12 @@ export default function ProductForm() {
         colorID: string,
         file: File | null,
     ) => {
-        if (!file) {
+        if (!file) return;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+            setError('Las imágenes deben ser JPG, PNG o WEBP y no superar 5 MB.');
             return;
         }
+        setError('');
 
         const preview =
             URL.createObjectURL(file);
@@ -493,6 +497,21 @@ export default function ProductForm() {
         });
     };
 
+    const sizeOptions = Array.from(new Set([
+        ...defaultSizes,
+        ...customSizes,
+        ...product.variants.map((variant) => variant.size).filter(Boolean),
+    ]));
+
+    const addCustomSize = () => {
+        const value = newSize.trim();
+        if (!value || sizeOptions.some((size) => size.toLowerCase() === value.toLowerCase())) {
+            return;
+        }
+        setCustomSizes((current) => [...current, value]);
+        setNewSize('');
+    };
+
     const toggleTag = (tagID: string) => {
         const exists =
             product.tagIds.includes(tagID);
@@ -533,6 +552,7 @@ export default function ProductForm() {
                 createSlug(product.name),
             description: product.description,
             price: Number(product.price),
+            stock: product.variants.length === 0 ? Number(product.stock) : 0,
             oldPrice: Number(product.oldPrice),
             categoryId: product.categoryId,
             collectionId:
@@ -1005,7 +1025,7 @@ export default function ProductForm() {
 
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/webp"
                                             onChange={(
                                                 event,
                                             ) => {
@@ -1133,7 +1153,7 @@ export default function ProductForm() {
 
                                             <input
                                                 type="file"
-                                                accept="image/*"
+                                                accept="image/jpeg,image/png,image/webp"
                                                 onChange={(
                                                     event,
                                                 ) => {
@@ -1168,6 +1188,29 @@ export default function ProductForm() {
                 <section className="admin-product-form__section">
                     <h2>Stock y tallas</h2>
 
+                    {product.variants.length === 0 && (
+                        <label>
+                            Stock disponible
+                            <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={product.stock}
+                                onChange={(event) => updateProduct({ stock: Math.max(0, Number(event.target.value)) })}
+                            />
+                        </label>
+                    )}
+
+                    {product.colors.length > 0 && (
+                        <div className="admin-product-form__size-editor">
+                            <label>
+                                Agregar talla
+                                <input value={newSize} onChange={(event) => setNewSize(event.target.value)} placeholder="Ej. 28, 3XL, Única" />
+                            </label>
+                            <button type="button" onClick={addCustomSize}>Agregar talla</button>
+                        </div>
+                    )}
+
                     {product.colors.map(
                         (color) => (
                             <div
@@ -1180,7 +1223,7 @@ export default function ProductForm() {
                                 </h3>
 
                                 <div className="admin-product-form__stock-grid">
-                                    {sizes.map(
+                                    {sizeOptions.map(
                                         (size) => {
                                             const variant =
                                                 getVariant(

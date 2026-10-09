@@ -70,63 +70,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const refreshCart = async () => {
         const currentItems = items;
+        if (currentItems.length === 0) return [];
 
-        if (currentItems.length === 0) {
-            return [];
-        }
-
-        const results = await Promise.all(
-            currentItems.map(async (item) => {
-                try {
-                    const product =
-                        await publicApi.get<Product>(
-                            `/products/${item.productId}`,
-                        );
-
-                    const variant =
-                        product.variants.find(
-                            (value) =>
-                                value.id ===
-                                item.variantId,
-                        );
-
-                    if (
-                        !product.published ||
-                        !variant
-                    ) {
-                        return null;
-                    }
-
-                    return {
-                        ...item,
-                        productName:
-                            product.name,
-                        price:
-                            product.price,
-                        imageUrl:
-                            product.images?.[0]?.url ??
-                            item.imageUrl,
-                        quantity: Math.min(
-                            item.quantity,
-                            variant.stock,
-                        ),
-                    };
-                } catch {
-                    return null;
-                }
-            }),
-        );
-
-        const nextItems = results.filter(
-            (
-                item,
-            ): item is CartItem =>
-                item !== null &&
-                item.quantity > 0,
-        );
-
+        const results = await Promise.all(currentItems.map(async (item) => {
+            try {
+                const product = await publicApi.get<Product>(`/products/${item.productId}`);
+                if (!product.published) return null;
+                const hasVariants = (product.variants ?? []).length > 0;
+                const variant = hasVariants
+                    ? product.variants.find((value) => value.id === item.variantId)
+                    : null;
+                if (hasVariants && !variant) return null;
+                const stock = hasVariants ? (variant?.stock ?? 0) : (product.stock ?? 0);
+                if (stock <= 0) return null;
+                return {
+                    ...item,
+                    productName: product.name,
+                    price: product.price,
+                    colorName: variant ? (product.colors.find((color) => color.id === variant.colorId)?.name ?? '') : '',
+                    size: variant?.size ?? '',
+                    sku: variant?.sku ?? '',
+                    imageUrl: product.images?.[0]?.url ?? item.imageUrl,
+                    quantity: Math.min(item.quantity, stock),
+                };
+            } catch {
+                return null;
+            }
+        }));
+        const nextItems = results.filter((item): item is CartItem => item !== null && item.quantity > 0);
         setItems(nextItems);
-
         return nextItems;
     };
 
@@ -135,7 +107,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [items]);
 
     const addItem = (input: AddCartItemInput) => {
-        const key = `${input.productId}:${input.variantId}`;
+        const key = `${input.productId}:${input.variantId || 'simple'}`;
 
         setItems((current) => {
             const existing = current.find((item) => item.key === key);

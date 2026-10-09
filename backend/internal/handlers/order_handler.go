@@ -3,9 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/raulferreyra/rsident/backend/internal/models"
 	"github.com/raulferreyra/rsident/backend/internal/services"
@@ -24,52 +27,48 @@ func NewOrderHandler(
 }
 
 func (h *OrderHandler) Create(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 6<<20)
 	var request models.CreateOrderRequest
-
 	orderJSON := c.PostForm("order")
 	if orderJSON == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Información del pedido requerida",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Información del pedido requerida"})
 		return
 	}
-
 	if err := json.Unmarshal([]byte(orderJSON), &request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Formato de pedido inválido",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Formato de pedido inválido"})
 		return
 	}
-
 	file, header, err := c.Request.FormFile("paymentProof")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Debes adjuntar el comprobante de pago",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Debes adjuntar el comprobante de pago"})
 		return
 	}
 	defer file.Close()
-
-	if header.Size > 5<<20 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "El comprobante no puede superar los 5 MB",
-		})
+	ext, err := validateImage(file, header.Size)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Comprobante inválido: " + err.Error()})
 		return
 	}
 
-	contentType := header.Header.Get("Content-Type")
-	if contentType != "image/jpeg" &&
-		contentType != "image/png" &&
-		contentType != "image/webp" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Formato de comprobante no permitido",
-		})
+	filename := uuid.NewString() + ext
+	uploadDir := filepath.Join("uploads", "payment-proofs")
+	if err := os.MkdirAll(uploadDir, 0750); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar el comprobante"})
 		return
 	}
-
-	c.JSON(http.StatusInternalServerError, gin.H{
-		"error": "Falta conectar el guardado del comprobante",
-	})
+	filePath := filepath.Join(uploadDir, filename)
+	if err := c.SaveUploadedFile(header, filePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar el comprobante"})
+		return
+	}
+	proofURL := "/uploads/payment-proofs/" + filename
+	order, err := h.service.Create(c.Request.Context(), request, proofURL)
+	if err != nil {
+		_ = os.Remove(filePath)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, order)
 }
 
 func (h *OrderHandler) List(

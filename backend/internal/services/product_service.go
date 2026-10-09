@@ -3,7 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -170,40 +173,88 @@ func (s *ProductService) Update(
 	id string,
 	product models.Product,
 ) error {
-	product.UpdatedAt = time.Now()
-
+	old, err := s.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	product.ID = id
+	product.CreatedAt = old.CreatedAt
+	product.UpdatedAt = time.Now().UTC()
 	if product.Images == nil {
 		product.Images = []models.ProductImage{}
 	}
-
 	if product.Colors == nil {
 		product.Colors = []models.ProductColor{}
 	}
-
 	if product.Variants == nil {
 		product.Variants = []models.ProductVariant{}
 	}
-
 	if product.TagIDs == nil {
 		product.TagIDs = []string{}
 	}
 
-	_, err := s.db.
-		Collection("products").
-		Doc(id).
-		Set(ctx, product)
+	_, err = s.db.Collection("products").Doc(id).Set(ctx, product)
+	if err != nil {
+		return err
+	}
 
-	return err
+	kept := productAssetURLs(product)
+	for _, url := range productAssetURLs(*old) {
+		if _, exists := kept[url]; !exists {
+			if err := removeProductAsset(id, url); err != nil {
+				logging.Error.Printf("No se pudo eliminar imagen antigua del producto %s (%s): %v", id, url, err)
+			}
+		}
+	}
+	return nil
 }
 
 func (s *ProductService) Delete(
 	ctx context.Context,
 	id string,
 ) error {
-	_, err := s.db.
-		Collection("products").
-		Doc(id).
-		Delete(ctx)
+	_, err := s.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if _, err := s.db.Collection("products").Doc(id).Delete(ctx); err != nil {
+		return err
+	}
+	if err := os.RemoveAll(filepath.Join("uploads", "products", filepath.Clean(id))); err != nil {
+		logging.Error.Printf("No se pudo eliminar carpeta de imágenes del producto %s: %v", id, err)
+		return fmt.Errorf("producto eliminado, pero no se pudieron eliminar sus imágenes: %w", err)
+	}
+	return nil
+}
 
-	return err
+func productAssetURLs(product models.Product) map[string]struct{} {
+	urls := make(map[string]struct{})
+	for _, image := range product.Images {
+		if image.URL != "" {
+			urls[image.URL] = struct{}{}
+		}
+	}
+	for _, color := range product.Colors {
+		if color.ImageURL != "" {
+			urls[color.ImageURL] = struct{}{}
+		}
+		for _, image := range color.Images {
+			if image.URL != "" {
+				urls[image.URL] = struct{}{}
+			}
+		}
+	}
+	return urls
+}
+
+func removeProductAsset(productID, url string) error {
+	prefix := "/uploads/products/" + productID + "/"
+	if !strings.HasPrefix(url, prefix) {
+		return nil
+	}
+	name := strings.TrimPrefix(url, prefix)
+	if name == "" || filepath.Base(name) != name || name == "." || name == ".." {
+		return fmt.Errorf("ruta de imagen no válida")
+	}
+	return os.Remove(filepath.Join("uploads", "products", productID, name))
 }
