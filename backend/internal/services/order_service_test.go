@@ -47,3 +47,26 @@ func TestNormalizeItemsMergesSameProductAndVariant(t *testing.T) {
 		t.Fatalf("unexpected quantities: %#v", got)
 	}
 }
+
+func TestPaymentRejectionDoesNotRestoreStockAfterCancellation(t *testing.T) {
+	if shouldRestoreStockOnPaymentRejection(OrderStatusCancelled) {
+		t.Fatal("cancelled order must not restore stock a second time")
+	}
+	if shouldRestoreStockOnPaymentRejection(OrderStatusRejected) {
+		t.Fatal("rejected order must not restore stock a second time")
+	}
+	if !shouldRestoreStockOnPaymentRejection(OrderStatusPendingReview) {
+		t.Fatal("pending order should restore stock when payment is rejected")
+	}
+}
+
+func TestValidateOrderCancellationRejectsShippedAndDelivered(t *testing.T) {
+	for _, status := range []string{OrderStatusShipped, OrderStatusDelivered, OrderStatusCancelled, OrderStatusRejected} {
+		if err := validateOrderCancellation(status); err == nil {
+			t.Errorf("expected cancellation from %q to be rejected", status)
+		}
+	}
+	if err := validateOrderCancellation(OrderStatusPreparing); err != nil {
+		t.Fatalf("preparing order should be cancellable: %v", err)
+	}
+}

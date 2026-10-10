@@ -24,6 +24,7 @@ COPY --from=builder /out/rsident-api /app/rsident-api
 
 RUN mkdir -p \
     /app/uploads \
+    /app/private/payment-proofs \
     /app/logs \
     /app/credentials
 

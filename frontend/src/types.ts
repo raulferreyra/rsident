@@ -98,3 +98,17 @@ export interface Order {
     createdAt: string;
     updatedAt: string;
 }
+export interface CustomerOrderLookup {
+    orderNumber: string;
+    paymentStatus: PaymentStatus;
+    orderStatus: OrderStatus;
+    receiptStatus: ReceiptStatus;
+    items: Array<{
+        productId: string;
+        variantId: string;
+        productName: string;
+        size: string;
+        quantity: number;
+    }>;
+    total: number;
+}

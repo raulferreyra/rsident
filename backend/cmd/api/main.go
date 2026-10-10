@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 
@@ -78,8 +80,6 @@ func main() {
 		})
 	}))
 
-	router.Static("/uploads", "./uploads")
-
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: allowedOrigins(),
 		AllowMethods: []string{
@@ -98,6 +98,19 @@ func main() {
 		},
 		MaxAge: 12 * 60 * 60,
 	}))
+
+	// Las imágenes de catálogo son públicas, pero los comprobantes nunca se
+	// exponen mediante el servidor estático. Los comprobantes nuevos se guardan
+	// fuera de uploads/ y los antiguos quedan bloqueados en esta ruta.
+	router.GET("/uploads/*filepath", func(c *gin.Context) {
+		relative := filepath.Clean(c.Param("filepath"))
+		relative = strings.TrimPrefix(relative, string(filepath.Separator))
+		if !filepath.IsLocal(relative) || relative == "payment-proofs" || strings.HasPrefix(relative, "payment-proofs"+string(filepath.Separator)) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.File(filepath.Join("uploads", relative))
+	})
 
 	catalogService := services.NewCatalogService(
 		firebase.Firestore,

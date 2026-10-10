@@ -133,6 +133,10 @@ func Setup(
 		"/orders/:id",
 		orderHandler.Get,
 	)
+	admin.GET(
+		"/orders/:id/payment-proof",
+		orderHandler.PaymentProof,
+	)
 	admin.POST(
 		"/orders/:id/payment/approve",
 		orderHandler.ApprovePayment,

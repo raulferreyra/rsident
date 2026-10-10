@@ -9,10 +9,6 @@ import {
     api,
 } from '../../api/client';
 
-import {
-    BACKEND_URL,
-} from '../../utils';
-
 import type {
     Order,
     OrderStatus,
@@ -56,6 +52,9 @@ export default function OrderDetail() {
     const [error, setError] =
         useState('');
 
+    const [proofURL, setProofURL] =
+        useState('');
+
     const load = async () => {
         if (!id) {
             return;
@@ -80,6 +79,35 @@ export default function OrderDetail() {
     useEffect(() => {
         void load();
     }, [id]);
+
+    useEffect(() => {
+        let objectURL = '';
+        let cancelled = false;
+
+        if (!id || !order?.paymentProofUrl) {
+            setProofURL('');
+            return;
+        }
+
+        void api.getOrderPaymentProof(id)
+            .then((blob) => {
+                if (cancelled) return;
+                objectURL = URL.createObjectURL(blob);
+                setProofURL(objectURL);
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    setError(err instanceof Error
+                        ? err.message
+                        : 'No se pudo cargar el comprobante');
+                }
+            });
+
+        return () => {
+            cancelled = true;
+            if (objectURL) URL.revokeObjectURL(objectURL);
+        };
+    }, [id, order?.paymentProofUrl]);
 
     const approvePayment = async () => {
         if (!id) {
@@ -222,15 +250,6 @@ export default function OrderDetail() {
             </main>
         );
     }
-
-    const proofURL =
-        order.paymentProofUrl
-            ? order.paymentProofUrl.startsWith(
-                'http',
-            )
-                ? order.paymentProofUrl
-                : `${BACKEND_URL}${order.paymentProofUrl}`
-            : '';
 
     return (
         <main className="admin-order-detail">
