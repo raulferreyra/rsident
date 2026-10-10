@@ -199,10 +199,15 @@ func (s *ProductService) Update(
 	}
 
 	kept := productAssetURLs(product)
-	for _, url := range productAssetURLs(*old) {
+	for url := range productAssetURLs(*old) {
 		if _, exists := kept[url]; !exists {
 			if err := removeProductAsset(id, url); err != nil {
-				logging.Error.Printf("No se pudo eliminar imagen antigua del producto %s (%s): %v", id, url, err)
+				logging.Error.Printf(
+					"No se pudo eliminar imagen antigua del producto %s (%s): %v",
+					id,
+					url,
+					err,
+				)
 			}
 		}
 	}
