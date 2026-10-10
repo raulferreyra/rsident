@@ -405,6 +405,10 @@ func (s *OrderService) updatePayment(
 			now := time.Now().UTC()
 
 			if status == PaymentStatusApproved {
+				currentOrderStatus := normalizeOrderStatus(result.OrderStatus)
+				if currentOrderStatus == OrderStatusCancelled || currentOrderStatus == OrderStatusRejected {
+					return fmt.Errorf("no se puede aprobar el pago de un pedido cancelado o rechazado")
+				}
 				result.PaymentStatus =
 					PaymentStatusApproved
 
@@ -427,33 +431,29 @@ func (s *OrderService) updatePayment(
 			}
 
 			if status == PaymentStatusRejected {
-				if err := restoreStock(
-					ctx,
-					tx,
-					s.db,
-					result.Items,
-				); err != nil {
-					return err
+				// Cancelar ya devuelve el inventario. Si después se rechaza
+				// el pago, no se debe restaurar por segunda vez.
+				currentOrderStatus := normalizeOrderStatus(result.OrderStatus)
+				if shouldRestoreStockOnPaymentRejection(currentOrderStatus) {
+					if err := restoreStock(ctx, tx, s.db, result.Items); err != nil {
+						return err
+					}
 				}
 
-				result.PaymentStatus =
-					PaymentStatusRejected
-
-				result.OrderStatus =
-					OrderStatusRejected
-
+				result.PaymentStatus = PaymentStatusRejected
+				if currentOrderStatus != OrderStatusCancelled {
+					result.OrderStatus = OrderStatusRejected
+				}
 				result.UpdatedAt = now
 
-				tx.Set(
-					orderRef,
-					map[string]interface{}{
-						"paymentStatus": PaymentStatusRejected,
-						"orderStatus":   OrderStatusRejected,
-						"updatedAt":     now,
-					},
-					firestore.MergeAll,
-				)
-
+				updates := map[string]interface{}{
+					"paymentStatus": PaymentStatusRejected,
+					"updatedAt":     now,
+				}
+				if currentOrderStatus != OrderStatusCancelled {
+					updates["orderStatus"] = OrderStatusRejected
+				}
+				tx.Set(orderRef, updates, firestore.MergeAll)
 				return nil
 			}
 
@@ -513,11 +513,13 @@ func (s *OrderService) UpdateOrderStatus(
 			if currentStatus == status {
 				return nil
 			}
+			if currentStatus == OrderStatusCancelled || currentStatus == OrderStatusRejected {
+				return fmt.Errorf("no se puede cambiar el estado de un pedido cancelado o rechazado")
+			}
 
 			if status == OrderStatusCancelled {
-				if currentStatus == OrderStatusCancelled ||
-					currentStatus == OrderStatusRejected {
-					return nil
+				if err := validateOrderCancellation(currentStatus); err != nil {
+					return err
 				}
 
 				if err := restoreStock(
@@ -763,11 +765,26 @@ func isValidOrderStatus(
 		OrderStatusPreparing,
 		OrderStatusShipped,
 		OrderStatusDelivered,
-		OrderStatusCancelled,
-		OrderStatusRejected:
+		OrderStatusCancelled:
 		return true
 	default:
 		return false
+	}
+}
+
+func shouldRestoreStockOnPaymentRejection(orderStatus string) bool {
+	status := normalizeOrderStatus(orderStatus)
+	return status != OrderStatusCancelled && status != OrderStatusRejected
+}
+
+func validateOrderCancellation(currentStatus string) error {
+	switch normalizeOrderStatus(currentStatus) {
+	case OrderStatusCancelled, OrderStatusRejected:
+		return fmt.Errorf("el pedido ya está cancelado o rechazado")
+	case OrderStatusShipped, OrderStatusDelivered:
+		return fmt.Errorf("no se puede cancelar un pedido enviado o entregado")
+	default:
+		return nil
 	}
 }
 

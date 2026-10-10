@@ -3,3 +3,4 @@ credentials/
 logs/
 .env
 backups/
+private/

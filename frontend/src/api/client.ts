@@ -1,6 +1,7 @@
 import { signOut } from 'firebase/auth';
 
 import { auth } from '../config/firebase';
+import type { CustomerOrderLookup, Order } from '../types';
 
 export const AUTH_ERROR_EVENT = 'rsident:auth-error';
 
@@ -166,6 +167,30 @@ export async function uploadFile<T>(
     return response.json();
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+    const perform = async (forceRefresh = false) => {
+        const token = await getToken(forceRefresh);
+        return fetch(`${API_URL}${path}`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+    };
+
+    let response = await perform();
+    if (response.status === 401) {
+        response = await perform(true);
+    }
+    if (!response.ok) {
+        const error = await parseError(response, 'No se pudo cargar el comprobante');
+        if (error.status === 401) {
+            await signOut(auth);
+            notifyAuthError();
+        }
+        throw error;
+    }
+    return response.blob();
+}
+
 export const api = {
     get: <T>(path: string) =>
         request<T>(path, {
@@ -198,6 +223,9 @@ export const api = {
         request<Order>(`/admin/orders/${id}`, {
             method: 'GET',
         }),
+
+    getOrderPaymentProof: (id: string) =>
+        requestBlob(`/admin/orders/${id}/payment-proof`),
 
     approvePayment: (id: string) =>
         request<Order>(
@@ -305,7 +333,7 @@ export async function lookupOrder(
     orderNumber: string,
     email: string,
 ) {
-    return publicRequest<Order>(
+    return publicRequest<CustomerOrderLookup>(
         `/orders/lookup?orderNumber=${encodeURIComponent(
             orderNumber,
         )}&email=${encodeURIComponent(email)}`,

@@ -3,3 +3,4 @@ credentials/
 logs/
 uploads/
 .git/backups/
+private/

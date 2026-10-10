@@ -51,7 +51,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 	}
 
 	filename := uuid.NewString() + ext
-	uploadDir := filepath.Join("uploads", "payment-proofs")
+	uploadDir := filepath.Join("private", "payment-proofs")
 	if err := os.MkdirAll(uploadDir, 0750); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar el comprobante"})
 		return
@@ -61,7 +61,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar el comprobante"})
 		return
 	}
-	proofURL := "/uploads/payment-proofs/" + filename
+	proofURL := "/private/payment-proofs/" + filename
 	order, err := h.service.Create(c.Request.Context(), request, proofURL)
 	if err != nil {
 		_ = os.Remove(filePath)
@@ -148,10 +148,57 @@ func (h *OrderHandler) CustomerGet(
 		return
 	}
 
-	c.JSON(
-		http.StatusOK,
-		order,
-	)
+	// La consulta pública solo devuelve los campos necesarios para seguimiento.
+	items := make([]gin.H, 0, len(order.Items))
+	for _, item := range order.Items {
+		items = append(items, gin.H{
+			"productId":   item.ProductID,
+			"variantId":   item.VariantID,
+			"productName": item.ProductName,
+			"size":        item.Size,
+			"quantity":    item.Quantity,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"orderNumber":   order.OrderNumber,
+		"paymentStatus": order.PaymentStatus,
+		"orderStatus":   order.OrderStatus,
+		"receiptStatus": order.ReceiptStatus,
+		"items":         items,
+		"total":         order.Total,
+	})
+}
+
+// PaymentProof sirve el comprobante solo a través del grupo /admin autenticado.
+func (h *OrderHandler) PaymentProof(c *gin.Context) {
+	order, err := h.service.Get(c.Request.Context(), c.Param("id"))
+	if err != nil || order.PaymentProofURL == "" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if !strings.HasPrefix(order.PaymentProofURL, "/private/payment-proofs/") &&
+		!strings.HasPrefix(order.PaymentProofURL, "/uploads/payment-proofs/") {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	filename := filepath.Base(order.PaymentProofURL)
+	if filename == "." || filename == string(filepath.Separator) || filename == "" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	// Compatibilidad con pedidos previos que guardaron el archivo bajo uploads/.
+	paths := []string{
+		filepath.Join("private", "payment-proofs", filename),
+		filepath.Join("uploads", "payment-proofs", filename),
+	}
+	for _, filePath := range paths {
+		if info, statErr := os.Stat(filePath); statErr == nil && !info.IsDir() {
+			c.Header("Cache-Control", "private, no-store")
+			c.File(filePath)
+			return
+		}
+	}
+	c.Status(http.StatusNotFound)
 }
 
 func (h *OrderHandler) ApprovePayment(

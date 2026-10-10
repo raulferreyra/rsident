@@ -7,7 +7,7 @@ import {
     lookupOrder,
 } from '../api/client';
 
-import type { Order } from '../types';
+import type { CustomerOrderLookup } from '../types';
 
 import './OrderLookup.css';
 
@@ -32,7 +32,7 @@ export default function OrderLookup() {
         useState('');
 
     const [order, setOrder] =
-        useState<Order | null>(null);
+        useState<CustomerOrderLookup | null>(null);
 
     const [error, setError] =
         useState('');
