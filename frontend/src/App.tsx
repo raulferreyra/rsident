@@ -12,6 +12,7 @@ import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
 import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
+import SplashScreen from './components/SplashScreen';
 
 import Shop from './pages/Shop';
 import ShopFilter from './pages/ShopFilter';
@@ -45,10 +46,13 @@ import './App.css';
 
 function Home() {
   return (
-    <main>
-      <HeroBanner />
-      <BestSellers />
-    </main>
+    <>
+      <SplashScreen />
+      <main>
+        <HeroBanner />
+        <BestSellers />
+      </main>
+    </>
   );
 }
 
