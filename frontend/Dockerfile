@@ -12,7 +12,7 @@ FROM base AS development
 
 EXPOSE 5173
 
-CMD ["npm","run","dev","--","--host","0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--force"]
 
 FROM base AS build
 
@@ -48,4 +48,4 @@ COPY --from=build \
 
 EXPOSE 80
 
-CMD [ "nginx", "-g", "daemon off;"]
+CMD [ "nginx", "-g", "daemon off;" ]
