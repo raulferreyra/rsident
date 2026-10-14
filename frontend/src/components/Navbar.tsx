@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import logoHeader from '../assets/logo-header.png';
+import logoHeaderBlack from '../assets/logo-header-black.png';
 import { publicApi } from '../api/client';
 import { useCart } from '../cart';
 import type { CatalogItem, Product } from '../types';
@@ -11,6 +12,8 @@ export default function Navbar() {
     const [categories, setCategories] = useState<CatalogItem[]>([]);
     const [collections, setCollections] = useState<CatalogItem[]>([]);
     const { count: cartCount } = useCart();
+    const location = useLocation();
+    const isInternalPage = location.pathname !== '/';
 
     useEffect(() => {
         const handleScroll = () => {
@@ -65,9 +68,19 @@ export default function Navbar() {
     }, []);
 
     return (
-        <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
+        <nav
+            className={[
+                'navbar',
+                scrolled ? 'navbar--scrolled' : '',
+                isInternalPage ? 'navbar--internal' : '',
+            ].filter(Boolean).join(' ')}
+        >
             <Link to="/" className="navbar__logo">
-                <img src={logoHeader} alt="RSIDENT" title="RSIDENT" />
+                <img
+                    src={isInternalPage ? logoHeaderBlack : logoHeader}
+                    alt="RSIDENT"
+                    title="RSIDENT"
+                />
             </Link>
 
             <div className="navbar__item">

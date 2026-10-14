@@ -160,3 +160,25 @@
     font-weight: 500;
     line-height: 1;
 }
+
+.navbar--internal {
+    background-color: #fff;
+    color: #111;
+}
+
+.navbar--internal .navbar__link,
+.navbar--internal .navbar__submenu-link {
+    color: #111;
+}
+
+.navbar--internal .navbar__cart-icon svg {
+    stroke: #111;
+}
+
+.navbar--internal .navbar__submenu {
+    background-color: #fff;
+}
+
+.navbar--internal .navbar__submenu-link:hover {
+    color: #555;
+}
