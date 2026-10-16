@@ -1,0 +1,6 @@
+uploads/
+credentials/
+logs/
+.env
+backups/
+private/

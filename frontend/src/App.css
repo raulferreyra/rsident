@@ -1,0 +1,9 @@
+form input,
+form select,
+form textarea {
+    color: #000;
+}
+
+form button {
+    color: #000;
+}

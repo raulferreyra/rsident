@@ -1,0 +1,166 @@
+.admin-products {
+    min-height: 100vh;
+    padding: 40px;
+}
+
+.admin-products__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+
+    margin-bottom: 50px;
+}
+
+.admin-products__header h1 {
+    margin: 0;
+
+    font-size: 2rem;
+    font-weight: 500;
+}
+
+.admin-products__header p {
+    margin: 8px 0 0;
+
+    color: #777;
+
+    font-size: 0.85rem;
+}
+
+.admin-products__create {
+    padding: 12px 18px;
+
+    border: 0;
+
+    background: #111;
+    color: #fff;
+
+    font: inherit;
+    font-size: 0.85rem;
+
+    cursor: pointer;
+}
+
+.admin-products__create:hover {
+    opacity: 0.85;
+}
+
+.admin-products__error {
+    margin: 0 0 30px;
+
+    color: #b00020;
+
+    font-size: 0.85rem;
+}
+
+.admin-products__table-container {
+    width: 100%;
+
+    overflow-x: auto;
+}
+
+.admin-products__table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    font-size: 0.85rem;
+}
+
+.admin-products__table th {
+    padding: 14px 16px;
+
+    border-top: 1px solid #111;
+    border-bottom: 1px solid #111;
+
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.admin-products__table td {
+    padding: 18px 16px;
+
+    border-bottom: 1px solid #ddd;
+
+    vertical-align: middle;
+}
+
+.admin-products__table td:first-child {
+    min-width: 260px;
+}
+
+.admin-products__table td:first-child strong {
+    display: block;
+
+    font-weight: 500;
+}
+
+.admin-products__table td:first-child small {
+    display: block;
+
+    margin-top: 5px;
+
+    color: #777;
+
+    font-size: 0.75rem;
+}
+
+.admin-products__actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.admin-products__actions button {
+    padding: 0;
+
+    border: 0;
+
+    background: transparent;
+    color: #111;
+
+    font: inherit;
+    font-size: 0.8rem;
+
+    cursor: pointer;
+}
+
+.admin-products__edit:hover,
+.admin-products__delete:hover {
+    text-decoration: underline;
+}
+
+.admin-products__delete {
+    color: #777 !important;
+}
+
+@media (max-width: 767px) {
+    .admin-products {
+        padding: 24px 20px;
+    }
+
+    .admin-products__header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .admin-products__header h1 {
+        font-size: 1.7rem;
+    }
+
+    .admin-products__create {
+        width: 100%;
+    }
+
+    .admin-products__table {
+        min-width: 700px;
+    }
+
+    .admin-products__table-container {
+        margin-right: -20px;
+        padding-right: 20px;
+    }
+}
