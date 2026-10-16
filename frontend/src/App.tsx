@@ -12,6 +12,7 @@ import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
 import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
+import Instagram from './components/Instagram';
 import SplashScreen from './components/SplashScreen';
 
 import Shop from './pages/Shop';
@@ -51,6 +52,7 @@ function Home() {
       <main>
         <HeroBanner />
         <BestSellers />
+        <Instagram />
       </main>
     </>
   );
