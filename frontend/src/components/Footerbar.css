@@ -3,17 +3,22 @@
     align-items: center;
 
     width: 100%;
-    max-width: 1400px;
-    padding: 24px 28px;
 
-    font-family: inherit;
-
-    color: inherit;
+    background: #353535;
+    color: #ddd;
     margin: 0 auto;
 
     transition:
         background-color 0.3s ease,
         color 0.3s ease;
+}
+
+.footer .frame {
+    max-width: 1400px;
+    padding: 24px 28px;
+    width: 100%;
+    display: flex;
+    align-items: center;
 }
 
 .footer__item {
