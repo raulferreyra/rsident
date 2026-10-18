@@ -10,6 +10,10 @@ const links = [
         path: '/admin/dashboard',
     },
     {
+        label: 'Home',
+        path: '/admin/home',
+    },
+    {
         label: 'Categorías',
         path: '/admin/categories',
     },
