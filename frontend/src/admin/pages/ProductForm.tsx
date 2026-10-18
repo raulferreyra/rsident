@@ -1127,6 +1127,19 @@ export default function ProductForm() {
                                             />
                                         </label>
 
+                                        <label className="admin-product-form__default-color">
+                                            <input
+                                                type="radio"
+                                                name="default-product-color"
+                                                checked={Boolean(color.default)}
+                                                onChange={() => setProduct((current) => ({
+                                                    ...current,
+                                                    colors: current.colors.map((item, colorIndex) => ({ ...item, default: colorIndex === index })),
+                                                }))}
+                                            />
+                                            Color predeterminado
+                                        </label>
+
                                         <label>
                                             Imagen representativa
 
