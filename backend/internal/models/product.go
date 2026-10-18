@@ -11,6 +11,7 @@ type ProductImage struct {
 type ProductColor struct {
 	ID       string         `json:"id" firestore:"id"`
 	Name     string         `json:"name" firestore:"name"`
+	Default  bool           `json:"default" firestore:"default"`
 	ImageURL string         `json:"imageUrl" firestore:"imageUrl"`
 	Images   []ProductImage `json:"images" firestore:"images"`
 }
