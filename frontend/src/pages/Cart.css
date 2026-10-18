@@ -87,6 +87,7 @@
     background: transparent;
     cursor: pointer;
     font-size: 1rem;
+    color: #666;
 }
 
 .cart-item__quantity span {
@@ -124,7 +125,7 @@
     font-weight: 500;
 }
 
-.cart-summary > div {
+.cart-summary>div {
     display: flex;
     justify-content: space-between;
     padding-bottom: 20px;
