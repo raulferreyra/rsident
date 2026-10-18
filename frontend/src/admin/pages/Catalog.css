@@ -36,7 +36,8 @@
     font-size: 0.8rem;
 }
 
-.admin-catalog__form input {
+.admin-catalog__form input,
+.admin-catalog__form select {
     width: 100%;
     padding: 12px 0;
 

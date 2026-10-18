@@ -36,6 +36,7 @@ export default function Catalog({
 }: CatalogProps) {
     const [items, setItems] = useState<CatalogItem[]>([]);
     const [name, setName] = useState('');
+    const [active, setActive] = useState(true);
     const [editingID, setEditingID] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -82,7 +83,7 @@ export default function Catalog({
             const body = {
                 name: name.trim(),
                 slug: createSlug(name),
-                active: true,
+                active,
             };
 
             if (editingID) {
@@ -98,6 +99,7 @@ export default function Catalog({
             }
 
             setName('');
+            setActive(true);
             setEditingID('');
 
             await loadItems();
@@ -115,6 +117,7 @@ export default function Catalog({
     const handleEdit = (item: CatalogItem) => {
         setEditingID(item.id);
         setName(item.name);
+        setActive(item.active);
     };
 
     const handleDelete = async (id: string) => {
@@ -144,6 +147,7 @@ export default function Catalog({
     const handleCancel = () => {
         setEditingID('');
         setName('');
+        setActive(true);
     };
 
     return (
@@ -173,6 +177,14 @@ export default function Catalog({
                             }
                             placeholder={`Nombre de ${title.toLowerCase()}`}
                         />
+                    </div>
+
+                    <div className="admin-catalog__field">
+                        <label htmlFor="catalog-active">Estado</label>
+                        <select id="catalog-active" value={active ? 'true' : 'false'} onChange={(event) => setActive(event.target.value === 'true')}>
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo</option>
+                        </select>
                     </div>
 
                     <div className="admin-catalog__form-actions">
