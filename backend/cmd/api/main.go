@@ -136,12 +136,15 @@ func main() {
 		mailer,
 	)
 
+	homeService := services.NewHomeService(firebase.Firestore)
+
 	routes.Setup(
 		router,
 		firebase.Auth,
 		catalogService,
 		productService,
 		orderService,
+		homeService,
 	)
 
 	log.Printf(
