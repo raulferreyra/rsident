@@ -11,7 +11,6 @@ export default function Footerbar() {
                     <div className="footer__item">
                         <Link to="/" rel="noopener noreferrer" target="_blank" className="footer__link">
                             <img src={libro} alt="Libro de Reclamaciones" title="Libro de Reclamaciones" className="reclaim-book" />
-                            Libro de Reclamaciones
                         </Link>
                     </div>
                     <div className="footer__item">
