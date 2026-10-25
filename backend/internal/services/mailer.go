@@ -127,6 +127,12 @@ func buildCustomerEmail(order models.Order) string {
 	builder.WriteString("Pedido: " + order.OrderNumber + "\n")
 	builder.WriteString(fmt.Sprintf("Total: S/ %.2f\n", order.Total))
 	builder.WriteString("Envío: Shalom - " + order.ShippingZone + "\n")
+	builder.WriteString("Destino: " + order.Department + " / " + order.Province + " / " + order.District + "\n")
+	builder.WriteString("Dirección: " + order.Address + "\n")
+	if order.AddressRef != "" {
+		builder.WriteString("Referencia: " + order.AddressRef + "\n")
+	}
+	builder.WriteString("Método de pago: " + order.PaymentMethod + "\n")
 	builder.WriteString("Persona que recogerá: " + order.PickupName + "\n")
 	builder.WriteString("DNI: " + order.PickupDNI + "\n\n")
 	builder.WriteString("Te informaremos por este medio sobre la tienda Shalom donde podrás recoger tu pedido.\n\n")
@@ -141,7 +147,15 @@ func buildCompanyEmail(order models.Order) string {
 	builder.WriteString("Nueva compra registrada en RSIDENT.\n\n")
 	builder.WriteString("Pedido: " + order.OrderNumber + "\n")
 	builder.WriteString("Cliente: " + order.CustomerEmail + "\n")
+	builder.WriteString("Destino: " + order.Department + " / " + order.Province + " / " + order.District + "\n")
 	builder.WriteString("Dirección: " + order.Address + "\n")
+	if order.AddressRef != "" {
+		builder.WriteString("Referencia: " + order.AddressRef + "\n")
+	}
+	if order.Latitude != nil && order.Longitude != nil {
+		builder.WriteString(fmt.Sprintf("Coordenadas: %.6f, %.6f\n", *order.Latitude, *order.Longitude))
+	}
+	builder.WriteString("Método de pago: " + order.PaymentMethod + "\n")
 	builder.WriteString("Zona: " + order.ShippingZone + "\n")
 	builder.WriteString("Courier: Shalom\n")
 	builder.WriteString("Persona que recoge: " + order.PickupName + "\n")

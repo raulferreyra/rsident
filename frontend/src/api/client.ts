@@ -282,6 +282,11 @@ export const publicApi = {
         publicRequest<T>(path, {
             method: 'GET',
         }),
+    post: <T>(path: string, body: unknown) =>
+        publicRequest<T>(path, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        }),
 };
 
 async function publicRequest<T>(

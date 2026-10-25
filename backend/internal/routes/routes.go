@@ -70,6 +70,7 @@ func Setup(
 	)
 
 	api.POST("/orders", orderHandler.Create)
+	api.POST("/payments/mercadopago/webhook", orderHandler.MercadoPagoWebhook)
 	api.GET(
 		"/orders/lookup",
 		orderHandler.CustomerGet,

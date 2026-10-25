@@ -452,10 +452,14 @@ export default function OrderDetail() {
                     {order.shippingZone}
                 </p>
 
-                <p>
-                    Dirección:{' '}
-                    {order.address}
-                </p>
+                <p>Departamento: {order.department || '—'}</p>
+                <p>Provincia: {order.province || '—'}</p>
+                <p>Distrito: {order.district || '—'}</p>
+                <p>Dirección: {order.address}</p>
+                {order.addressReference && <p>Referencia: {order.addressReference}</p>}
+                {order.latitude != null && order.longitude != null && <p>Coordenadas: {order.latitude}, {order.longitude}</p>}
+                <p>Método de pago: {order.paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Yape'}</p>
+                {order.mercadoPagoPaymentId && <p>Operación Mercado Pago: {order.mercadoPagoPaymentId}</p>}
 
                 <p>
                     Recibe:{' '}

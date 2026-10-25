@@ -84,7 +84,16 @@ export interface Order {
     customerEmail: string;
     shippingZone: string;
     shippingCost: number;
+    paymentMethod?: 'yape' | 'mercadopago';
+    department?: string;
+    province?: string;
+    district?: string;
     address: string;
+    addressReference?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    mercadoPagoPreferenceId?: string;
+    mercadoPagoPaymentId?: string;
     pickupName: string;
     pickupDni: string;
     courier: string;

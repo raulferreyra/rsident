@@ -41,6 +41,15 @@ func (s *OrderService) Create(
 	if err := validateCreateOrder(request); err != nil {
 		return nil, err
 	}
+	if request.PaymentMethod == "" {
+		request.PaymentMethod = "yape"
+	}
+	if request.PaymentMethod != "yape" && request.PaymentMethod != "mercadopago" {
+		return nil, fmt.Errorf("método de pago inválido")
+	}
+	if request.PaymentMethod == "yape" && strings.TrimSpace(paymentProofURL) == "" {
+		return nil, fmt.Errorf("debes adjuntar el comprobante de pago de Yape")
+	}
 
 	shippingCost, ok := shippingCosts[request.ShippingZone]
 	if !ok {
@@ -168,7 +177,14 @@ func (s *OrderService) Create(
 			CustomerEmail:   strings.ToLower(strings.TrimSpace(request.CustomerEmail)),
 			ShippingZone:    request.ShippingZone,
 			ShippingCost:    shippingCost,
+			PaymentMethod:   request.PaymentMethod,
+			Department:      strings.TrimSpace(request.Department),
+			Province:        strings.TrimSpace(request.Province),
+			District:        strings.TrimSpace(request.District),
 			Address:         strings.TrimSpace(request.Address),
+			AddressRef:      strings.TrimSpace(request.AddressRef),
+			Latitude:        request.Latitude,
+			Longitude:       request.Longitude,
 			PickupName:      strings.TrimSpace(request.PickupName),
 			PickupDNI:       strings.TrimSpace(request.PickupDNI),
 			Courier:         "Shalom",
@@ -699,6 +715,10 @@ func validateCreateOrder(
 		)
 	}
 
+	if strings.TrimSpace(request.Department) == "" || strings.TrimSpace(request.Province) == "" || strings.TrimSpace(request.District) == "" {
+		return fmt.Errorf("departamento, provincia y distrito son obligatorios")
+	}
+
 	if strings.TrimSpace(
 		request.Address,
 	) == "" {
@@ -806,4 +826,20 @@ func normalizeOrderStatus(
 	}
 
 	return status
+}
+
+func (s *OrderService) SetMercadoPagoPreference(ctx context.Context, orderID, preferenceID string) error {
+	_, err := s.db.Collection("orders").Doc(orderID).Set(ctx, map[string]interface{}{
+		"mercadoPagoPreferenceId": preferenceID,
+		"updatedAt":               time.Now().UTC(),
+	}, firestore.MergeAll)
+	return err
+}
+
+func (s *OrderService) SetMercadoPagoPayment(ctx context.Context, orderID, paymentID string) error {
+	_, err := s.db.Collection("orders").Doc(orderID).Set(ctx, map[string]interface{}{
+		"mercadoPagoPaymentId": paymentID,
+		"updatedAt":            time.Now().UTC(),
+	}, firestore.MergeAll)
+	return err
 }

@@ -10,6 +10,9 @@ func TestValidateCreateOrderAllowsSimpleProduct(t *testing.T) {
 	request := models.CreateOrderRequest{
 		CustomerEmail: "buyer@example.com",
 		ShippingZone:  "lima_metropolitana",
+		Department:    "Lima",
+		Province:      "Lima",
+		District:      "Miraflores",
 		Address:       "Av. Ejemplo 123",
 		PickupName:    "Comprador",
 		PickupDNI:     "12345678",
@@ -23,6 +26,9 @@ func TestValidateCreateOrderAllowsSimpleProduct(t *testing.T) {
 func TestValidateCreateOrderRejectsNonPositiveQuantity(t *testing.T) {
 	request := models.CreateOrderRequest{
 		CustomerEmail: "buyer@example.com",
+		Department:    "Lima",
+		Province:      "Lima",
+		District:      "Miraflores",
 		Address:       "Av. Ejemplo 123",
 		PickupName:    "Comprador",
 		PickupDNI:     "12345678",
