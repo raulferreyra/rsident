@@ -17,7 +17,6 @@ import Navbar from './components/Navbar';
 import Footerbar from './components/Footerbar';
 import HeroBanner from './components/HeroBanner';
 import BestSellers from './components/BestSellers';
-import Instagram from './components/Instagram';
 import SplashScreen from './components/SplashScreen';
 
 import Shop from './pages/Shop';
@@ -49,6 +48,7 @@ import Orders from './admin/pages/Orders';
 import OrderDetail from './admin/pages/OrderDetail';
 
 import './App.css';
+import Instagram from './components/Instagram';
 
 function WhatsAppButton() {
   return <a className="whatsapp-float" href="https://wa.me/51999999999" target="_blank" rel="noreferrer" aria-label="Contactar por WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3a12.7 12.7 0 0 0-10.8 19.4L3.5 29l6.8-1.8A12.8 12.8 0 1 0 16 3zm0 2.5a10.2 10.2 0 0 1 0 20.4c-1.7 0-3.4-.4-4.9-1.3l-.5-.3-3.8 1 1-3.7-.3-.5A10.2 10.2 0 0 1 16 5.5zm-5.4 5.2c-.3 0-.7.1-1 .5-.3.3-1.1 1.1-1.1 2.7s1.1 3.1 1.2 3.3c.2.2 2.2 3.5 5.4 4.8 2.7 1.1 3.2.9 3.8.8.6-.1 1.9-.8 2.2-1.6.3-.8.3-1.5.2-1.6-.1-.2-.3-.3-.7-.5l-2.2-1.1c-.3-.1-.5-.2-.7.2l-1 1.2c-.2.2-.4.3-.7.1a8.3 8.3 0 0 1-2.5-1.5 9.3 9.3 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6.3-.5c.1-.2 0-.4 0-.6l-1-2.3c-.3-.6-.5-.6-.8-.6z" /></svg></a>;
