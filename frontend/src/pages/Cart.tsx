@@ -77,6 +77,7 @@ export default function Cart() {
                                             <span>{item.quantity}</span>
                                             <button
                                                 type="button"
+                                                disabled={item.quantity >= 5}
                                                 onClick={() =>
                                                     updateQuantity(
                                                         item.key,

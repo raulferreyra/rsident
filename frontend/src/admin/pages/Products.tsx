@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import type { HomeConfig } from '../../types';
 import './Products.css';
 
 interface Product {
@@ -20,6 +21,7 @@ export default function Products() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [bestSellerIds, setBestSellerIds] = useState<string[]>([]);
 
     const loadProducts = async () => {
         setLoading(true);
@@ -31,6 +33,8 @@ export default function Products() {
             );
 
             setProducts(result);
+            const home = await api.get<HomeConfig>('/admin/home');
+            setBestSellerIds(home.bestSellerIds ?? []);
         } catch (err) {
             setError(
                 err instanceof Error
@@ -70,6 +74,17 @@ export default function Products() {
         }
     };
 
+    const toggleBestSeller = async (id: string) => {
+        const next = bestSellerIds.includes(id) ? bestSellerIds.filter(value => value !== id) : [...bestSellerIds, id];
+        if (next.length > 8) { setError('Solo puedes seleccionar hasta 8 productos más vendidos.'); return; }
+        try {
+            const home = await api.get<HomeConfig>('/admin/home');
+            await api.put('/admin/home', { ...home, bestSellerIds: next });
+            setBestSellerIds(next);
+            setError('');
+        } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo actualizar Más vendidos'); }
+    };
+
     return (
         <main className="admin-products">
             <header className="admin-products__header">
@@ -106,6 +121,7 @@ export default function Products() {
                                 <th>Precio</th>
                                 <th>Estado</th>
                                 <th>Destacado</th>
+                                <th>Más vendidos</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -134,10 +150,9 @@ export default function Products() {
                                     </td>
 
                                     <td>
-                                        {product.featured
-                                            ? 'Sí'
-                                            : 'No'}
+                                        {product.featured ? 'Sí' : 'No'}
                                     </td>
+                                    <td><input type="checkbox" aria-label={`Incluir ${product.name} en Más vendidos`} checked={bestSellerIds.includes(product.id)} onChange={() => void toggleBestSeller(product.id)} disabled={!bestSellerIds.includes(product.id) && bestSellerIds.length >= 8} /></td>
 
                                     <td>
                                         <div className="admin-products__actions">

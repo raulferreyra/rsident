@@ -14,6 +14,7 @@ export interface ProductImage {
 export interface ProductColor {
     id: string;
     name: string;
+    default?: boolean;
     imageUrl: string;
     images: ProductImage[];
 }
@@ -37,6 +38,7 @@ export interface Product {
     categoryId: string;
     collectionId: string;
     tagIds: string[];
+    tagNames?: string[];
     images: ProductImage[];
     colors: ProductColor[];
     variants: ProductVariant[];
@@ -82,7 +84,16 @@ export interface Order {
     customerEmail: string;
     shippingZone: string;
     shippingCost: number;
+    paymentMethod?: 'yape' | 'mercadopago';
+    department?: string;
+    province?: string;
+    district?: string;
     address: string;
+    addressReference?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    mercadoPagoPreferenceId?: string;
+    mercadoPagoPaymentId?: string;
     pickupName: string;
     pickupDni: string;
     courier: string;
@@ -112,3 +123,6 @@ export interface CustomerOrderLookup {
     }>;
     total: number;
 }
+
+export interface HomeBanner { mediaUrl: string; mediaType: 'image' | 'video'; title: string; buttonText: string; linkType: 'product' | 'page' | 'filter'; linkTarget: string; }
+export interface HomeConfig { banners: HomeBanner[]; message: string; bestSellerIds: string[]; }

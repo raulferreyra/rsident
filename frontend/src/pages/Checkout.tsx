@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useCart } from '../cart';
-import { publicUpload } from '../api/client';
+import { publicApi, publicUpload } from '../api/client';
 import { formatPrice, getImageURL } from '../utils';
 import './Checkout.css';
 
@@ -27,6 +27,7 @@ const shippingOptions = [
 interface OrderResponse {
     orderNumber: string;
     total: number;
+    initPoint?: string;
 }
 
 export default function Checkout() {
@@ -35,14 +36,20 @@ export default function Checkout() {
         items,
         subtotal,
         clearCart,
-        refreshCart,
     } = useCart();
 
     const [shippingZone, setShippingZone] = useState(
         'lima_metropolitana',
     );
     const [email, setEmail] = useState('');
+    const [department, setDepartment] = useState('Lima');
+    const [province, setProvince] = useState('');
+    const [district, setDistrict] = useState('');
     const [address, setAddress] = useState('');
+    const [addressReference, setAddressReference] = useState('');
+    const [latitude, setLatitude] = useState<number | null>(null);
+    const [longitude, setLongitude] = useState<number | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'yape' | 'mercadopago'>('yape');
     const [pickupName, setPickupName] = useState('');
     const [pickupDNI, setPickupDNI] = useState('');
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
@@ -74,51 +81,59 @@ export default function Checkout() {
         event.preventDefault();
         setError('');
 
-        if (!paymentProof) {
-            setError('Debes adjuntar la imagen del comprobante de pago.');
+        if (!province.trim() || !district.trim()) {
+            setError('Completa el departamento, provincia y distrito de envío.');
             return;
         }
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(paymentProof.type) || paymentProof.size > 5 * 1024 * 1024) {
+        if (paymentMethod === 'yape' && !paymentProof) {
+            setError('Debes adjuntar la imagen del comprobante de Yape.');
+            return;
+        }
+        if (paymentMethod === 'yape' && paymentProof && (!['image/jpeg', 'image/png', 'image/webp'].includes(paymentProof.type) || paymentProof.size > 5 * 1024 * 1024)) {
             setError('El comprobante debe ser JPG, PNG o WEBP y no superar 5 MB.');
             return;
         }
-
         if (!/^\d{8}$/.test(pickupDNI)) {
             setError('El DNI debe tener 8 dígitos.');
             return;
         }
 
         setSubmitting(true);
+        const order = {
+            customerEmail: email,
+            address,
+            addressReference,
+            department,
+            province,
+            district,
+            latitude,
+            longitude,
+            shippingZone,
+            paymentMethod,
+            pickupName,
+            pickupDni: pickupDNI,
+            items: items.map((item) => ({
+                productId: item.productId,
+                variantId: item.variantId,
+                quantity: item.quantity,
+            })),
+        };
 
         try {
-            const result = await publicUpload<OrderResponse>(
-                '/orders',
-                {
-                    order: JSON.stringify({
-                        customerEmail: email,
-                        address,
-                        shippingZone,
-                        shippingCarrier: 'Shalom',
-                        pickupName,
-                        pickupDni: pickupDNI,
-                        items: items.map((item) => ({
-                            productId: item.productId,
-                            variantId: item.variantId,
-                            quantity: item.quantity,
-                        })),
-                    }),
-                },
-                paymentProof,
-            );
-
+            let result: OrderResponse;
+            if (paymentMethod === 'yape') {
+                result = await publicUpload<OrderResponse>('/orders', { order: JSON.stringify(order) }, paymentProof as File);
+            } else {
+                result = await publicApi.post<OrderResponse>('/orders', order);
+            }
             clearCart();
+            if (paymentMethod === 'mercadopago' && result.initPoint) {
+                window.location.assign(result.initPoint);
+                return;
+            }
             navigate(`/compra-confirmada/${result.orderNumber}`);
         } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : 'No se pudo registrar la compra.',
-            );
+            setError(err instanceof Error ? err.message : 'No se pudo registrar la compra.');
         } finally {
             setSubmitting(false);
         }
@@ -175,16 +190,36 @@ export default function Checkout() {
                         </label>
 
                         <label>
-                            Dirección
-                            <textarea
-                                value={address}
-                                onChange={(event) =>
-                                    setAddress(event.target.value)
-                                }
-                                rows={4}
-                                required
-                            />
+                            Departamento
+                            <select value={department} onChange={(event) => setDepartment(event.target.value)} required>
+                                {['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'].map((value) => <option key={value} value={value}>{value}</option>)}
+                            </select>
                         </label>
+                        <label>
+                            Provincia
+                            <input type="text" value={province} onChange={(event) => setProvince(event.target.value)} required autoComplete="address-level2" />
+                        </label>
+                        <label>
+                            Distrito
+                            <input type="text" value={district} onChange={(event) => setDistrict(event.target.value)} required autoComplete="address-level3" />
+                        </label>
+                        <label>
+                            Dirección exacta
+                            <textarea value={address} onChange={(event) => setAddress(event.target.value)} rows={3} required autoComplete="street-address" />
+                        </label>
+                        <label>
+                            Referencia (opcional)
+                            <input type="text" value={addressReference} onChange={(event) => setAddressReference(event.target.value)} placeholder="Piso, color de puerta, referencia cercana" />
+                        </label>
+                        <button type="button" className="checkout-form__location" onClick={() => {
+                            if (!navigator.geolocation) { setError('Este navegador no permite obtener la ubicación.'); return; }
+                            navigator.geolocation.getCurrentPosition((position) => {
+                                setLatitude(position.coords.latitude);
+                                setLongitude(position.coords.longitude);
+                                setError('');
+                            }, () => setError('No se pudo obtener la ubicación. Puedes continuar sin coordenadas.'), { enableHighAccuracy: true, timeout: 10000 });
+                        }}>Usar mi ubicación (opcional)</button>
+                        {latitude !== null && longitude !== null && <small>Ubicación guardada: {latitude.toFixed(6)}, {longitude.toFixed(6)}</small>}
 
                         <div className="checkout-section__notice">
                             El envío se realizará mediante Shalom. La tienda
@@ -226,11 +261,15 @@ export default function Checkout() {
 
                     <section className="checkout-section checkout-section--payment">
                         <h2>Pago</h2>
-                        <p>
-                            Realiza el pago mediante el siguiente QR y adjunta
-                            una imagen del comprobante.
-                        </p>
-
+                        <label>
+                            Método de pago
+                            <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as 'yape' | 'mercadopago')}>
+                                <option value="yape">Yape (validación manual)</option>
+                                <option value="mercadopago">Mercado Pago</option>
+                            </select>
+                        </label>
+                        {paymentMethod === 'yape' ? <>
+                        <p>Escanea el QR de Yape y adjunta una imagen de la constancia. El pago será validado manualmente por RSIDENT.</p>
                         <div className="checkout-payment__qr">
                             <img
                                 src="/QR.png"
@@ -257,11 +296,9 @@ export default function Checkout() {
                                 }
                                 required
                             />
-                            <small>
-                                Formatos permitidos: JPG, PNG o WEBP. Máximo 5
-                                MB.
-                            </small>
+                            <small>Formatos permitidos: JPG, PNG o WEBP. Máximo 5 MB.</small>
                         </label>
+                        </> : <p>Al confirmar, se registrará el pedido y serás redirigido a Mercado Pago para completar el pago. La confirmación se validará desde el servidor.</p>}
                     </section>
 
                     {error && (

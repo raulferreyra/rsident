@@ -1,0 +1,13 @@
+.home-message {
+    padding: 44px 24px;
+    text-align: center;
+    background: #f7f7f7;
+    color: #111
+}
+
+.home-message p {
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    line-height: 1.6
+}

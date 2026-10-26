@@ -214,6 +214,15 @@ export const api = {
             method: 'DELETE',
         }),
 
+    uploadFile: async <T>(path: string, file: File): Promise<T> => {
+        const token = await getToken();
+        const form = new FormData();
+        form.append('file', file);
+        const response = await fetch(`${API_URL}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+        if (!response.ok) throw await parseError(response, 'No se pudo subir el archivo');
+        return response.json() as Promise<T>;
+    },
+
     getOrders: () =>
         request<Order[]>('/admin/orders', {
             method: 'GET',
@@ -272,6 +281,11 @@ export const publicApi = {
     get: <T>(path: string) =>
         publicRequest<T>(path, {
             method: 'GET',
+        }),
+    post: <T>(path: string, body: unknown) =>
+        publicRequest<T>(path, {
+            method: 'POST',
+            body: JSON.stringify(body),
         }),
 };
 

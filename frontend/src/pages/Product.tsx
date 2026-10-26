@@ -84,6 +84,10 @@ export default function ProductPage() {
             element.content = value;
         };
         setMeta('description', description);
+        void publicApi.get<CatalogItem[]>('/catalog/tags').then((tags) => {
+            const keywords = tags.filter((tag) => product.tagIds?.includes(tag.id)).map((tag) => tag.name);
+            setMeta('keywords', keywords.join(', '));
+        }).catch(() => setMeta('keywords', ''));
         setMeta('og:type', 'product', true);
         setMeta('og:title', title, true);
         setMeta('og:description', description, true);

@@ -106,3 +106,12 @@ func validWebPContainer(data []byte) bool {
 	}
 	return hasImage
 }
+
+func validateImageHeader(header *multipart.FileHeader) (string, error) {
+	file, err := header.Open()
+	if err != nil {
+		return "", fmt.Errorf("no se pudo abrir el archivo")
+	}
+	defer file.Close()
+	return validateImage(file, header.Size)
+}

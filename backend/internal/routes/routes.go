@@ -15,6 +15,7 @@ func Setup(
 	catalogService *services.CatalogService,
 	productService *services.ProductService,
 	orderService *services.OrderService,
+	homeService *services.HomeService,
 ) {
 	api := router.Group("/api")
 
@@ -35,6 +36,8 @@ func Setup(
 	orderHandler := handlers.NewOrderHandler(
 		orderService,
 	)
+	homeHandler := handlers.NewHomeHandler(homeService)
+	api.GET("/home", homeHandler.Get)
 
 	api.GET("/catalog/categories", func(c *gin.Context) {
 		c.Set("admin", false)
@@ -44,6 +47,10 @@ func Setup(
 	api.GET("/catalog/collections", func(c *gin.Context) {
 		c.Set("admin", false)
 		catalogHandler.ListCollection(c, "collections")
+	})
+	api.GET("/catalog/tags", func(c *gin.Context) {
+		c.Set("admin", false)
+		catalogHandler.ListCollection(c, "tags")
 	})
 
 	api.GET(
@@ -63,6 +70,7 @@ func Setup(
 	)
 
 	api.POST("/orders", orderHandler.Create)
+	api.POST("/payments/mercadopago/webhook", orderHandler.MercadoPagoWebhook)
 	api.GET(
 		"/orders/lookup",
 		orderHandler.CustomerGet,
@@ -71,6 +79,9 @@ func Setup(
 	admin := api.Group("/admin")
 	admin.Use(middleware.FirebaseAuth(authClient))
 
+	admin.GET("/home", homeHandler.Get)
+	admin.PUT("/home", homeHandler.Save)
+	admin.POST("/home/media", homeHandler.UploadMedia)
 	admin.GET(
 		"/dashboard",
 		handlers.Dashboard,
