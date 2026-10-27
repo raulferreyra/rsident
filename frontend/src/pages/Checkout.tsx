@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useCart } from '../cart';
@@ -30,6 +30,29 @@ interface OrderResponse {
     initPoint?: string;
 }
 
+interface UbigeoDepartment {
+    id: number;
+    departamento: string;
+    ubigeo: string;
+}
+
+interface UbigeoProvince {
+    id: number;
+    provincia: string;
+    ubigeo: string;
+    departamento_id: number;
+}
+
+interface UbigeoDistrict {
+    id: number;
+    distrito: string;
+    ubigeo: string;
+    provincia_id: number;
+    departamento_id: number;
+}
+
+const UBIGEO_BASE_URL = 'https://raw.githubusercontent.com/RitchieRD/ubigeos-peru-data/main/json';
+
 export default function Checkout() {
     const navigate = useNavigate();
     const {
@@ -42,9 +65,64 @@ export default function Checkout() {
         'lima_metropolitana',
     );
     const [email, setEmail] = useState('');
-    const [department, setDepartment] = useState('Lima');
-    const [province, setProvince] = useState('');
-    const [district, setDistrict] = useState('');
+    const [departments, setDepartments] = useState<UbigeoDepartment[]>([]);
+    const [provinces, setProvinces] = useState<UbigeoProvince[]>([]);
+    const [districts, setDistricts] = useState<UbigeoDistrict[]>([]);
+    const [departmentId, setDepartmentId] = useState('');
+    const [provinceId, setProvinceId] = useState('');
+    const [districtId, setDistrictId] = useState('');
+    const [ubigeoLoading, setUbigeoLoading] = useState(true);
+    const [ubigeoError, setUbigeoError] = useState('');
+
+    const department = departments.find((item) => String(item.id) === departmentId)?.departamento ?? '';
+    const province = provinces.find((item) => String(item.id) === provinceId)?.provincia ?? '';
+    const district = districts.find((item) => String(item.id) === districtId)?.distrito ?? '';
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        async function loadUbigeo() {
+            setUbigeoLoading(true);
+            setUbigeoError('');
+            try {
+                const [departmentResponse, provinceResponse, districtResponse] = await Promise.all([
+                    fetch(`${UBIGEO_BASE_URL}/1_ubigeo_departamentos.json`, { signal: controller.signal }),
+                    fetch(`${UBIGEO_BASE_URL}/2_ubigeo_provincias.json`, { signal: controller.signal }),
+                    fetch(`${UBIGEO_BASE_URL}/3_ubigeo_distritos.json`, { signal: controller.signal }),
+                ]);
+                if (!departmentResponse.ok || !provinceResponse.ok || !districtResponse.ok) {
+                    throw new Error('No se pudo cargar la base de datos UBIGEO.');
+                }
+                const [departmentData, provinceData, districtData] = await Promise.all([
+                    departmentResponse.json() as Promise<UbigeoDepartment[]>,
+                    provinceResponse.json() as Promise<UbigeoProvince[]>,
+                    districtResponse.json() as Promise<UbigeoDistrict[]>,
+                ]);
+                setDepartments(departmentData);
+                setProvinces(provinceData);
+                setDistricts(districtData);
+                const lima = departmentData.find((item) => item.departamento.toLocaleLowerCase('es-PE') === 'lima');
+                if (lima) setDepartmentId(String(lima.id));
+            } catch (loadError) {
+                if (loadError instanceof DOMException && loadError.name === 'AbortError') return;
+                setUbigeoError('No se pudo cargar UBIGEO. Revisa la conexión e intenta recargar la página.');
+            } finally {
+                if (!controller.signal.aborted) setUbigeoLoading(false);
+            }
+        }
+
+        void loadUbigeo();
+        return () => controller.abort();
+    }, []);
+
+    const availableProvinces = useMemo(
+        () => provinces.filter((item) => String(item.departamento_id) === departmentId),
+        [provinces, departmentId],
+    );
+    const availableDistricts = useMemo(
+        () => districts.filter((item) => String(item.provincia_id) === provinceId),
+        [districts, provinceId],
+    );
     const [address, setAddress] = useState('');
     const [addressReference, setAddressReference] = useState('');
     const [latitude, setLatitude] = useState<number | null>(null);
@@ -81,7 +159,7 @@ export default function Checkout() {
         event.preventDefault();
         setError('');
 
-        if (!province.trim() || !district.trim()) {
+        if (!department || !province || !district) {
             setError('Completa el departamento, provincia y distrito de envío.');
             return;
         }
@@ -189,19 +267,51 @@ export default function Checkout() {
                             </select>
                         </label>
 
+                        {ubigeoError && <p className="checkout-section__notice" role="alert">{ubigeoError}</p>}
                         <label>
                             Departamento
-                            <select value={department} onChange={(event) => setDepartment(event.target.value)} required>
-                                {['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'].map((value) => <option key={value} value={value}>{value}</option>)}
+                            <select
+                                value={departmentId}
+                                onChange={(event) => {
+                                    setDepartmentId(event.target.value);
+                                    setProvinceId('');
+                                    setDistrictId('');
+                                }}
+                                required
+                                disabled={ubigeoLoading || departments.length === 0}
+                            >
+                                <option value="">{ubigeoLoading ? 'Cargando departamentos…' : 'Selecciona un departamento'}</option>
+                                {departments.map((item) => <option key={item.id} value={String(item.id)}>{item.departamento}</option>)}
                             </select>
                         </label>
                         <label>
                             Provincia
-                            <input type="text" value={province} onChange={(event) => setProvince(event.target.value)} required autoComplete="address-level2" />
+                            <select
+                                value={provinceId}
+                                onChange={(event) => {
+                                    setProvinceId(event.target.value);
+                                    setDistrictId('');
+                                }}
+                                required
+                                disabled={ubigeoLoading || !departmentId}
+                                autoComplete="address-level2"
+                            >
+                                <option value="">Selecciona una provincia</option>
+                                {availableProvinces.map((item) => <option key={item.id} value={String(item.id)}>{item.provincia}</option>)}
+                            </select>
                         </label>
                         <label>
                             Distrito
-                            <input type="text" value={district} onChange={(event) => setDistrict(event.target.value)} required autoComplete="address-level3" />
+                            <select
+                                value={districtId}
+                                onChange={(event) => setDistrictId(event.target.value)}
+                                required
+                                disabled={ubigeoLoading || !provinceId}
+                                autoComplete="address-level3"
+                            >
+                                <option value="">Selecciona un distrito</option>
+                                {availableDistricts.map((item) => <option key={item.id} value={String(item.id)}>{item.distrito}</option>)}
+                            </select>
                         </label>
                         <label>
                             Dirección exacta

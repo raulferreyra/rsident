@@ -15,8 +15,8 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  --rs-font-display: 'Archivo', Arial, sans-serif;
-  --rs-font-body: 'Inter', Arial, sans-serif;
+  --rs-font-display: 'Inter 24pt', Arial, sans-serif;
+  --rs-font-body: 'Inter 24pt', Arial, sans-serif;
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
